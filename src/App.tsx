@@ -7,6 +7,7 @@ import Alerts from './pages/Alerts';
 import Portfolio from './pages/Portfolio';
 import Rooms from './pages/Rooms';
 import NewCards from './pages/NewCards';
+import Profile from './pages/Profile';
 import { useAura } from './context/AuraContext';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -60,6 +61,7 @@ function AppShell() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/rooms" element={<Rooms />} />
             <Route path="/new-cards" element={<NewCards />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<Navigate to="/stream" replace />} />
           </Routes>
         </div>
