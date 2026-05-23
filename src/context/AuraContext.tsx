@@ -98,7 +98,7 @@ interface AuraContextType {
   isTipping: boolean;
 
   // Social
-  xFollowers: number | null;
+  xFollowers: number;
   xFollowing: number;
 
   // Alerts
@@ -211,7 +211,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const [isTrading, setIsTrading] = useState(false);
   const [isTipping, setIsTipping] = useState(false);
   const [likingPostId, setLikingPostId] = useState<number | null>(null);
-  const [xFollowers, setXFollowers] = useState<number | null>(null);
+  const [xFollowers, setXFollowers] = useState<number>(0);
   const [xFollowing, setXFollowing] = useState<number>(0);
 
   // Portfolio state
@@ -248,20 +248,24 @@ export function AuraProvider({ children }: { children: ReactNode }) {
             const priceInMon = Number(formatUnits(priceData as bigint, 18));
             totalVal += priceInMon * data.amount;
             holdingsArr.push({ address: subj, amount: data.amount, sellPrice: priceInMon });
-          } catch {}
+          } catch(e) {}
         }
       }
-      const holdersArr = Object.entries(myHolders).filter(([, amount]) => amount > 0).map(([address, amount]) => ({ address, amount }));
-      setHoldings(holdingsArr);
-      setHolders(holdersArr);
+      setHoldings(holdingsArr.sort((a,b) => b.sellPrice * b.amount - a.sellPrice * a.amount));
       setPortfolioValue(totalVal);
-    } catch (err) { console.error("Error fetching portfolio", err); }
-    finally { setIsPortfolioLoading(false); }
+      
+      const holdersArr = [];
+      for (const [holder, amt] of Object.entries(myHolders)) {
+        if (amt > 0) holdersArr.push({ address: holder, amount: amt });
+      }
+      setHolders(holdersArr.sort((a,b) => b.amount - a.amount));
+    } catch (err) { console.error(err); } finally { setIsPortfolioLoading(false); }
   };
+  useEffect(() => { fetchPortfolio(); }, [walletAddress, isTrading]);
 
   // Twitter followers
   useEffect(() => {
-    if (authenticated && user?.twitter?.username && xFollowers === null) {
+    if (authenticated && user?.twitter?.username) {
       fetch(`https://api.fxtwitter.com/${user.twitter.username}`)
         .then(r => r.json()).then(data => { if (data.code === 200) { setXFollowers(data.user.followers || 0); setXFollowing(data.user.following || 0); } else setXFollowers(0); })
         .catch(() => setXFollowers(0));
@@ -278,10 +282,10 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       const dbTierColor = dbTierName === 'Shark' ? '#FF5E00' : profileData[2];
       setFullProfile({ name: profileData[0], screen_name: profileData[0], avatar_url: user?.twitter?.profilePictureUrl || `https://unavatar.io/twitter/${profileData[0]}`, followers: xFollowers || 0, following: xFollowing, realData: { balance: mainnetBalance, symbol: 'MON', txCount: mainnetTxCount }, auraScore: Number(profileData[3]), tierName: dbTierName, tierLevel: 'ON-CHAIN', tierColor: dbTierColor });
       setShowRevealModal(false);
-    } else if (user?.twitter && xFollowers !== null && balanceData !== undefined && !showRevealModal && !fullProfile) {
+    } else if (user?.twitter && xFollowers !== null && !showRevealModal && !fullProfile) {
       calculateAndReveal();
     }
-  }, [authenticated, user, xFollowers, balanceData, mainnetTxCount, onChainProfile, isProfileLoading]);
+  }, [authenticated, user, xFollowers, mainnetTxCount, onChainProfile, isProfileLoading]);
 
   const calculateAndReveal = () => {
     const score = Math.floor(((xFollowers || 0) * 1) + (mainnetBalance * 0.01) + (mainnetTxCount * 5));
