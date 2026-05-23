@@ -138,7 +138,7 @@ export function useAura() {
 }
 
 export function AuraProvider({ children }: { children: ReactNode }) {
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId: monadTestnet.id });
   const { ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter, linkWallet } = usePrivy();
   const walletAddress = user?.wallet?.address as `0x${string}` | undefined;
   const { data: balanceData } = useBalance({ address: walletAddress });
