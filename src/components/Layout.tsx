@@ -120,8 +120,8 @@ export function Sidebar() {
 
             <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(135deg, transparent, ${fullProfile.tierColor})` }}></div>
             <div className="flex items-center space-x-3 relative z-10">
-              <div className="w-10 h-10 border-2 overflow-hidden rounded-full shadow-lg" style={{ borderColor: fullProfile.tierColor }}>
-                <img src={fullProfile.avatar_url.replace('_normal', '')} alt="Avatar" className="w-full h-full object-cover" />
+              <div className="w-10 h-10 border-2 overflow-hidden rounded-full shadow-lg bg-[#09090b]" style={{ borderColor: fullProfile.tierColor }}>
+                <img src={fullProfile.avatar_url ? fullProfile.avatar_url.replace('_normal', '') : `https://api.dicebear.com/7.x/avataaars/svg?seed=${walletAddress}`} alt="Avatar" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center space-x-2">

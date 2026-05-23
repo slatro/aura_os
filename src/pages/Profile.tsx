@@ -42,7 +42,7 @@ export default function Profile() {
           <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(135deg, transparent, ${fullProfile.tierColor})` }}></div>
           
           <div className="w-32 h-32 md:w-40 md:h-40 border-4 overflow-hidden rounded-full shadow-2xl relative z-10 flex-shrink-0 mb-6" style={{ borderColor: fullProfile.tierColor, boxShadow: `0 0 40px ${fullProfile.tierColor}40` }}>
-            <img src={fullProfile.avatar_url.replace('_normal', '')} alt="Avatar" className="w-full h-full object-cover" />
+            <img src={fullProfile.avatar_url ? fullProfile.avatar_url.replace('_normal', '') : `https://api.dicebear.com/7.x/avataaars/svg?seed=${walletAddress}`} alt="Avatar" className="w-full h-full object-cover bg-[#09090b]" />
           </div>
           
           <div className="space-y-6 relative z-10 w-full max-w-xl mx-auto">
