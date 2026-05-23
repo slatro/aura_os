@@ -127,6 +127,7 @@ interface AuraContextType {
   profileModalData: any;
   refetchProfileModal: () => void;
   likingPostId: number | null;
+  isMining: boolean;
 }
 
 const AuraContext = createContext<AuraContextType | null>(null);
@@ -214,11 +215,13 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [publicProfile, setPublicProfile] = useState<any>(null);
   const [isMinting, setIsMinting] = useState(false);
+  const [isMining, setIsMining] = useState(false);
   const [isTrading, setIsTrading] = useState(false);
   const [isTipping, setIsTipping] = useState(false);
   const [likingPostId, setLikingPostId] = useState<number | null>(null);
   const [xFollowers, setXFollowers] = useState<number>(0);
   const [xFollowing, setXFollowing] = useState<number>(0);
+  const [hasFetchedTwitter, setHasFetchedTwitter] = useState(false);
 
   // Portfolio state
   const [holdings, setHoldings] = useState<any[]>([]);
@@ -273,8 +276,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (authenticated && user?.twitter?.username) {
       fetch(`https://api.fxtwitter.com/${user.twitter.username}`)
-        .then(r => r.json()).then(data => { if (data.code === 200) { setXFollowers(data.user.followers || 0); setXFollowing(data.user.following || 0); } else setXFollowers(0); })
-        .catch(() => setXFollowers(0));
+        .then(r => r.json()).then(data => { if (data.code === 200) { setXFollowers(data.user.followers || 0); setXFollowing(data.user.following || 0); } else setXFollowers(0); setHasFetchedTwitter(true); })
+        .catch(() => { setXFollowers(0); setHasFetchedTwitter(true); });
     }
   }, [authenticated, user]);
 
@@ -288,10 +291,10 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       const dbTierColor = dbTierName === 'Shark' ? '#FF5E00' : profileData[2];
       setFullProfile({ name: profileData[0], screen_name: profileData[0], avatar_url: user?.twitter?.profilePictureUrl || `https://unavatar.io/twitter/${profileData[0]}`, followers: xFollowers || 0, following: xFollowing, realData: { balance: mainnetBalance, symbol: 'MON', txCount: mainnetTxCount }, auraScore: Number(profileData[3]), tierName: dbTierName, tierLevel: 'ON-CHAIN', tierColor: dbTierColor });
       setShowRevealModal(false);
-    } else if (user?.twitter && xFollowers !== null && !showRevealModal && !fullProfile) {
+    } else if (user?.twitter && hasFetchedTwitter && !showRevealModal && !fullProfile) {
       calculateAndReveal();
     }
-  }, [authenticated, user, xFollowers, mainnetTxCount, onChainProfile, isProfileLoading]);
+  }, [authenticated, user, xFollowers, hasFetchedTwitter, mainnetTxCount, onChainProfile, isProfileLoading]);
 
   const calculateAndReveal = () => {
     const score = Math.floor(((xFollowers || 0) * 1) + (mainnetBalance * 0.01) + (mainnetTxCount * 5));
@@ -320,13 +323,20 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       setIsMinting(true);
       await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'registerProfile', chainId: monadTestnet.id, args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, BigInt(Math.floor(fullProfile.auraScore))] });
+      
+      setIsMinting(false);
+      setIsMining(true);
+      
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfile(); await refetchRadar();
       setShowRevealModal(false); setShowProfileModal(true);
     } catch (e: any) { 
       console.error(e); 
       alert("Mint failed: " + (e.shortMessage || e.message));
-    } finally { setIsMinting(false); }
+    } finally { 
+      setIsMinting(false); 
+      setIsMining(false);
+    }
   };
 
   const handleExecutePost = async (text: string) => {
@@ -426,6 +436,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       holdings, holders, isPortfolioLoading, portfolioValue, fetchPortfolio,
       handleMintProfile, handleExecutePost, handleLikePost, handleBuyKey, handleSellKey, handleTip, openPublicProfile,
       posts, radarProfiles, profileModalData, refetchProfileModal, ownProfileData, refetchOwnProfileData,
+      isMining
     }}>
       {children}
     </AuraContext.Provider>

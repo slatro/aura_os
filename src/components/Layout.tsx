@@ -227,7 +227,7 @@ export function RightSidebar() {
 // REVEAL MODAL
 // =============================================
 export function RevealModal() {
-  const { showRevealModal, setShowRevealModal, fullProfile, isRevealed, isMinting, handleMintProfile } = useAura();
+  const { showRevealModal, setShowRevealModal, fullProfile, isRevealed, isMinting, isMining, handleMintProfile } = useAura();
   if (!showRevealModal) return null;
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md">
@@ -249,10 +249,10 @@ export function RevealModal() {
           <div className="text-lg md:text-xl font-mono mb-6" style={{ color: fullProfile?.tierColor }}>Aura: {fullProfile?.auraScore?.toLocaleString()}</div>
           <button 
             onClick={handleMintProfile}
-            disabled={isMinting}
+            disabled={isMinting || isMining}
             className="text-[#836EF9] hover:bg-[#836EF9] hover:text-[#050505] font-bold font-mono text-xs uppercase tracking-widest border border-[#836EF9]/50 bg-[#836EF9]/10 py-3 px-8 cyber-button transition-all disabled:opacity-50"
           >
-            {isMinting ? 'AWAITING WALLET SIGNATURE...' : 'EXECUTE_SEQUENCE (MINT)'}
+            {isMinting ? 'AWAITING WALLET SIGNATURE...' : isMining ? 'MINING ON CHAIN...' : 'EXECUTE_SEQUENCE (MINT)'}
           </button>
         </div>
       </div>
