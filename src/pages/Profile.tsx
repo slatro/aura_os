@@ -56,6 +56,19 @@ export default function Profile() {
   } : null);
 
   if (!displayProfile || !displayData) {
+    if (isOwnProfile && authenticated && !user?.twitter) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center h-full space-y-6">
+          <div className="text-[#71717a] font-mono text-sm uppercase tracking-widest text-center max-w-md px-4">
+            Aura OS requires your X (Twitter) identity to calculate your social score.
+          </div>
+          <button onClick={() => linkTwitter()} className="bg-[#1da1f2]/10 border border-[#1da1f2]/50 text-[#1da1f2] hover:bg-[#1da1f2] hover:text-white font-bold py-4 px-8 cyber-button text-sm uppercase tracking-widest flex items-center justify-center transition-all shadow-[0_0_15px_rgba(29,161,242,0.3)]">
+            <Crosshair className="w-5 h-5 mr-3" /> INITIALIZE X IDENTITY
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex-1 flex items-center justify-center h-full text-[#71717a] font-mono text-sm uppercase tracking-widest animate-pulse">
         <SparklesIcon className="w-5 h-5 mr-3" /> Awaiting On-Chain Profile...

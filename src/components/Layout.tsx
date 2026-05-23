@@ -132,8 +132,10 @@ export function Sidebar() {
               </div>
             </div>
           </div>
-        ) : walletAddress && authenticated && user?.twitter && !showRevealModal && !fullProfile ? (
-          <div className="text-center p-4 border border-dashed border-[#27272a] bg-[#050505] cyber-button"><span className="text-[#71717a] font-mono text-xs animate-pulse">Awaiting On-Chain Minting...</span></div>
+        ) : walletAddress && authenticated && !showRevealModal && !fullProfile ? (
+          <div onClick={() => navigate('/profile')} className="text-center p-4 border border-dashed border-[#836EF9]/50 bg-[#836EF9]/5 hover:bg-[#836EF9]/10 cyber-button cursor-pointer transition-all">
+            <span className="text-[#836EF9] font-mono text-xs animate-pulse font-bold tracking-widest">INITIALIZE PROFILE</span>
+          </div>
         ) : (
           renderConnectionButtons()
         )}
