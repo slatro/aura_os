@@ -250,9 +250,9 @@ export function RevealModal() {
           <button 
             onClick={handleMintProfile}
             disabled={isMinting || isMining}
-            className="text-[#836EF9] hover:bg-[#836EF9] hover:text-[#050505] font-bold font-mono text-xs uppercase tracking-widest border border-[#836EF9]/50 bg-[#836EF9]/10 py-3 px-8 cyber-button transition-all disabled:opacity-50"
+            className="text-[#836EF9] disabled:hover:text-[#836EF9] disabled:hover:bg-[#836EF9]/10 hover:bg-[#836EF9] hover:text-[#050505] font-bold font-mono text-xs uppercase tracking-widest border border-[#836EF9]/50 bg-[#836EF9]/10 py-3 px-8 cyber-button transition-all disabled:opacity-50"
           >
-            {isMinting ? 'AWAITING WALLET SIGNATURE...' : isMining ? 'MINING ON CHAIN...' : 'EXECUTE_SEQUENCE (MINT)'}
+            {isMinting ? 'AWAITING WALLET SIGNATURE...' : isMining ? 'MINTING...' : 'EXECUTE_SEQUENCE (MINT)'}
           </button>
         </div>
       </div>

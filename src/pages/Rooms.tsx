@@ -181,7 +181,9 @@ export default function Rooms() {
         chainId: monadTestnet.id,
         args: [selectedRoom.address, msgText],
       });
-      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
+      setChatInput('');
     } catch (err) {
       console.error('Failed to send message:', err);
       // Revert optimistic update on error

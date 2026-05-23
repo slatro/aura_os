@@ -327,7 +327,9 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       setIsMinting(false);
       setIsMining(true);
       
-      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted on-chain (Username may be taken or gas failed).");
+      
       await refetchProfile(); await refetchRadar();
       setShowRevealModal(false); setShowProfileModal(true);
     } catch (e: any) { 
@@ -345,7 +347,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     try {
       await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'executePost', chainId: monadTestnet.id, args: [safeContent] });
-      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
       await refetchPosts();
     } catch (e) { console.error(e); alert("Post execution failed."); }
   };
@@ -355,7 +358,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       setLikingPostId(postId);
       await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'likePost', chainId: monadTestnet.id, args: [postId] });
-      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
       await refetchPosts();
     } catch (e) { console.error("Like failed", e); } finally { setLikingPostId(null); }
   };
@@ -365,7 +369,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       setIsTrading(true);
       await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'buyKey', chainId: monadTestnet.id, args: [address], value: price });
-      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
       await refetchProfileModal();
     } catch (e) { console.error(e); alert("Trade failed"); } finally { setIsTrading(false); }
   };
@@ -375,7 +380,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       setIsTrading(true);
       await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'sellKey', chainId: monadTestnet.id, args: [address] });
-      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
       await refetchProfileModal();
     } catch (e) { console.error(e); alert("Trade failed"); } finally { setIsTrading(false); }
   };
@@ -387,7 +393,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       await ensureMonadNetwork();
       const tx = await sendTransactionAsync({
         to: toAddress as `0x${string}`, value: parseEther('0.1') });
-      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
       alert("Tip successful!");
     } catch (e) { console.error("Tip failed", e); } finally { setIsTipping(false); }
   };
