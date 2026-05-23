@@ -4,7 +4,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from '@privy-io/wagmi';
 
-import { config } from './config/wagmi';
+import { config, monadTestnet } from './config/wagmi';
 import App from './App.tsx';
 import './index.css';
 
@@ -24,6 +24,8 @@ createRoot(document.getElementById('root')!).render(
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
         },
+        defaultChain: monadTestnet,
+        supportedChains: [monadTestnet],
       }}
     >
       <QueryClientProvider client={queryClient}>
