@@ -5,7 +5,7 @@ import { formatUnits, parseEther, createPublicClient, http } from 'viem';
 import { monadTestnet } from 'viem/chains';
 import AuraNetworkABI from '../config/AuraNetworkABI.json';
 
-export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS as `0x${string}`;
+export const CONTRACT_ADDRESS = '0x1b95c26d7e01a215f57ce3f5f5ce512430bc4139' as `0x${string}`;
 
 // =============================================
 // SECURITY HELPERS
