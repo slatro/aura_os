@@ -21,9 +21,6 @@ createRoot(document.getElementById('root')!).render(
           logo: 'https://monad.xyz/favicon.ico', // Monad logo placeholder
         },
         loginMethods: ['wallet', 'twitter'],
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
         defaultChain: monadTestnet,
         supportedChains: [monadTestnet],
       }}

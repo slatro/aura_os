@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { useAccount, useBalance, usePublicClient, useWriteContract, useReadContract, useWatchContractEvent, useSendTransaction } from 'wagmi';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useBalance, usePublicClient, useWriteContract, useReadContract, useWatchContractEvent, useSendTransaction } from 'wagmi';
 import { usePrivy } from '@privy-io/react-auth';
 import { formatUnits, parseEther, createPublicClient, http } from 'viem';
 import AuraNetworkABI from '../config/AuraNetworkABI.json';
@@ -80,6 +80,8 @@ interface AuraContextType {
   refetchProfile: () => void;
   refetchPosts: () => void;
   refetchRadar: () => void;
+  ownProfileData: any;
+  refetchOwnProfileData: () => void;
 
   // Profile State
   fullProfile: FullProfile | null;
@@ -289,7 +291,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     else if (score >= 15000) { tierName = 'Shark'; tierLevel = 'T2'; tierColor = '#FF5E00'; }
     else if (score >= 5000)  { tierName = 'Node'; tierLevel = 'T3'; tierColor = '#FFD700'; }
     else if (score >= 1000)  { tierName = 'Operator'; tierLevel = 'T4'; tierColor = '#4ade80'; }
-    setFullProfile({ name: user?.twitter?.name || user?.twitter?.username, screen_name: user?.twitter?.username, avatar_url: user?.twitter?.profilePictureUrl || '', followers: xFollowers || 0, following: xFollowing, realData: { balance: mainnetBalance, symbol: 'MON', txCount: mainnetTxCount }, auraScore: score, tierName, tierLevel, tierColor });
+    setFullProfile({ name: user?.twitter?.name || user?.twitter?.username || 'Unknown', screen_name: user?.twitter?.username || 'Unknown', avatar_url: user?.twitter?.profilePictureUrl || '', followers: xFollowers || 0, following: xFollowing, realData: { balance: mainnetBalance, symbol: 'MON', txCount: mainnetTxCount }, auraScore: score, tierName, tierLevel, tierColor });
     setShowRevealModal(true); setIsRevealed(false);
     setTimeout(() => setIsRevealed(true), 3000);
   };

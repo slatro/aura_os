@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Sparkles } from '@react-three/drei';
-import { Terminal, MessageSquare, Repeat, Zap, Wallet, User, Bell, Crosshair, Trophy, Activity, PenTool, Sparkles as SparklesIcon } from 'lucide-react';
+import { Terminal, MessageSquare, Repeat, Wallet, Bell, Crosshair, Trophy, PenTool, Sparkles as SparklesIcon } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAura } from '../context/AuraContext';
 import { formatUnits } from 'viem';
@@ -10,7 +10,7 @@ import { formatUnits } from 'viem';
 // 3D REVEAL COMPONENT
 // =============================================
 function GlowingMonad({ color, isRevealed }: { color: string; isRevealed: boolean }) {
-  const groupRef = useRef<any>();
+  const groupRef = useRef<any>(null);
   useFrame((_, delta) => {
     if (groupRef.current) {
       groupRef.current.rotation.y += delta * (isRevealed ? 2.5 : 0.5);
@@ -53,7 +53,7 @@ function SideNavLink({ icon, label, to }: { icon: React.ReactNode; label: string
 // =============================================
 export function Sidebar() {
   const navigate = useNavigate();
-  const { authenticated, user, walletAddress, login, logout, linkTwitter, unlinkTwitter, linkWallet, fullProfile, showRevealModal, onChainProfile, openPublicProfile } = useAura();
+  const { authenticated, user, walletAddress, login, logout, linkTwitter, unlinkTwitter, linkWallet, fullProfile, showRevealModal, onChainProfile } = useAura();
 
   const renderConnectionButtons = () => (
     <div className="space-y-3">
