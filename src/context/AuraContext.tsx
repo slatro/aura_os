@@ -330,7 +330,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
       if (receipt?.status === 'reverted') throw new Error("Transaction reverted on-chain (Username may be taken or gas failed).");
       
-      await refetchProfile(); await refetchRadar();
+      await refetchProfile(); await refetchRadar(); await refetchOwnProfileData();
       setShowRevealModal(false); setShowProfileModal(true);
     } catch (e: any) { 
       console.error(e); 

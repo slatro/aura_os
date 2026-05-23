@@ -23,7 +23,8 @@ export default function Profile() {
     user,
     linkTwitter,
     unlinkTwitter,
-    authenticated
+    authenticated,
+    holders
   } = useAura();
 
   const isOwnProfile = !address || (walletAddress && address.toLowerCase() === walletAddress.toLowerCase());
@@ -81,10 +82,10 @@ export default function Profile() {
       <div className="max-w-3xl mx-auto space-y-8">
         
         {/* Header Profile Section */}
-        <div className="bg-[#09090b] border border-[#27272a] cyber-button p-8 relative overflow-hidden flex flex-col items-center text-center">
+        <div className="bg-[#09090b] border border-[#27272a] cyber-button p-5 md:p-6 relative overflow-hidden flex flex-col items-center text-center">
           <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(135deg, transparent, ${displayProfile.tierColor})` }}></div>
           
-          <div className="w-32 h-32 md:w-40 md:h-40 border-4 overflow-hidden rounded-full shadow-2xl relative z-10 flex-shrink-0 mb-6" style={{ borderColor: displayProfile.tierColor, boxShadow: `0 0 40px ${displayProfile.tierColor}40` }}>
+          <div className="w-24 h-24 md:w-32 md:h-32 border-4 overflow-hidden rounded-full shadow-2xl relative z-10 flex-shrink-0 mb-4" style={{ borderColor: displayProfile.tierColor, boxShadow: `0 0 40px ${displayProfile.tierColor}40` }}>
             <img src={displayProfile.avatar_url.replace('_normal', '')} alt="Avatar" className="w-full h-full object-cover bg-[#09090b]" />
           </div>
           
@@ -103,7 +104,7 @@ export default function Profile() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-2 mt-8 pt-6 border-t border-[#27272a]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-2 mt-5 pt-5 border-t border-[#27272a]">
               <div className="bg-[#050505] border border-[#18181b] p-3 rounded-lg">
                 <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center"><Trophy className="w-3 h-3 mr-1" /> Aura</div>
                 <div className="text-white font-bold" style={{ color: displayProfile.tierColor }}>{displayProfile.auraScore.toLocaleString()}</div>
@@ -115,7 +116,7 @@ export default function Profile() {
             </div>
 
             {/* Action Buttons (Disconnect vs Tip) */}
-            <div className="flex flex-col md:flex-row gap-4 mt-6 pt-6 border-t border-[#27272a]">
+            <div className="flex flex-col md:flex-row gap-4 mt-5 pt-5 border-t border-[#27272a]">
               {isOwnProfile ? (
                 <>
                   <button onClick={logout} className="flex-1 bg-[#18181b] border border-[#27272a] text-[#71717a] font-bold py-3 cyber-button text-xs uppercase tracking-widest flex items-center justify-center group hover:bg-red-500/10 hover:border-red-500 hover:text-red-500 transition-colors relative overflow-hidden">
@@ -125,7 +126,7 @@ export default function Profile() {
 
                   {authenticated && user?.twitter ? (
                     <button onClick={() => { if (user?.twitter?.subject) unlinkTwitter(user.twitter.subject); }} className="flex-1 bg-[#1da1f2]/10 border border-[#1da1f2]/50 text-[#1da1f2] font-bold py-3 cyber-button text-xs uppercase tracking-widest flex items-center justify-center group hover:bg-red-500/20 hover:border-red-500 hover:text-red-500 transition-colors relative overflow-hidden">
-                      <div className="flex items-center group-hover:opacity-0 transition-opacity"><User className="w-4 h-4 mr-2" />Linked: @{user.twitter.username}</div>
+                      <div className="flex items-center justify-center space-x-1.5 group-hover:opacity-0 transition-opacity w-full"><User className="w-4 h-4" /><span>@{user.twitter.username}</span></div>
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Repeat className="w-4 h-4 mr-2" />Unlink X</div>
                     </button>
                   ) : (
@@ -156,8 +157,8 @@ export default function Profile() {
                 <span className="text-white text-sm font-bold">{Number((displayData as any)[1] || 0)}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[#18181b]">
-                <span className="text-[#71717a] text-xs">Market Cap (MCAP)</span>
-                <span className="text-white text-sm font-bold text-[#836EF9]">{(Number((displayData as any)[1] || 0) * Number(formatUnits((displayData as any)[3] || 0n, 18))).toFixed(4)} MON</span>
+                <span className="text-[#71717a] text-xs">Total Holders</span>
+                <span className="text-white text-sm font-bold text-[#836EF9]">{isOwnProfile ? holders.length : '?'}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[#18181b]">
                 <span className="text-[#71717a] text-xs">Cards You Own</span>

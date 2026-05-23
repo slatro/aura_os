@@ -114,7 +114,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="mt-auto mb-8 ml-2">
+      <div className="mt-6 mb-8 ml-2">
         {fullProfile && !showRevealModal ? (
           <div onClick={() => navigate('/profile')} className="bg-[#09090b] border border-[#27272a] hover:border-[#52525b] cyber-button p-3 flex items-center justify-between cursor-pointer group transition-all relative overflow-hidden">
 
