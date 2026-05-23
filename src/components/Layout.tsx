@@ -85,7 +85,7 @@ export function Sidebar() {
       <div className="space-y-1">
         <div className="flex items-center space-x-3 mb-8 ml-2">
           <div className="w-10 h-10 overflow-hidden flex-shrink-0">
-            <img src="/logo.png" alt="AURA_OS Logo" className="w-full h-full object-contain" />
+            <img src="/logo.svg" alt="AURA_OS Logo" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col">
             <span className="text-white font-bold tracking-widest uppercase text-sm">AURA_OS</span>
