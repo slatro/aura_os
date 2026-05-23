@@ -4,7 +4,7 @@ import { Trophy, Wallet, Crosshair, Sparkles as SparklesIcon, User, Repeat } fro
 import { useAura, CONTRACT_ADDRESS } from '../context/AuraContext';
 import { formatUnits } from 'viem';
 import { useReadContract } from 'wagmi';
-import AuraNetworkABI from '../abi/AuraNetwork.json';
+import AuraNetworkABI from '../config/AuraNetworkABI.json';
 
 export default function Profile() {
   const { address } = useParams();
