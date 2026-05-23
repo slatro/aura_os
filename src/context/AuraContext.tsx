@@ -317,7 +317,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     if (!fullProfile) return;
     try {
       setIsMinting(true);
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'registerProfile', args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, fullProfile.auraScore] });
+      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'registerProfile', chainId: monadTestnet.id, args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, fullProfile.auraScore] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfile(); await refetchRadar();
       setShowRevealModal(false); setShowProfileModal(true);
@@ -328,7 +328,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     const safeContent = sanitizeText(text, 1000);
     if (!safeContent) return;
     try {
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'executePost', args: [safeContent] });
+      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'executePost', chainId: monadTestnet.id, args: [safeContent] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchPosts();
     } catch (e) { console.error(e); alert("Post execution failed."); }
@@ -337,7 +337,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const handleLikePost = async (postId: number) => {
     try {
       setLikingPostId(postId);
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'likePost', args: [postId] });
+      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'likePost', chainId: monadTestnet.id, args: [postId] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchPosts();
     } catch (e) { console.error("Like failed", e); } finally { setLikingPostId(null); }
@@ -346,7 +346,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const handleBuyKey = async (address: string, price: bigint) => {
     try {
       setIsTrading(true);
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'buyKey', args: [address], value: price });
+      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'buyKey', chainId: monadTestnet.id, args: [address], value: price });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfileModal();
     } catch (e) { console.error(e); alert("Trade failed"); } finally { setIsTrading(false); }
@@ -355,7 +355,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const handleSellKey = async (address: string) => {
     try {
       setIsTrading(true);
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'sellKey', args: [address] });
+      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'sellKey', chainId: monadTestnet.id, args: [address] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfileModal();
     } catch (e) { console.error(e); alert("Trade failed"); } finally { setIsTrading(false); }

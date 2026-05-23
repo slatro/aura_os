@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Lock, Hash } from 'lucide-react';
 import { useAura, CONTRACT_ADDRESS } from '../context/AuraContext';
 import AuraNetworkABI from '../config/AuraNetworkABI.json';
+import { monadTestnet } from 'viem/chains';
 
 function getInitials(address: string): string {
   return address ? address.slice(2, 4).toUpperCase() : '??';
@@ -170,6 +171,7 @@ export default function Rooms() {
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: AuraNetworkABI,
         functionName: 'sendMessage',
+        chainId: monadTestnet.id,
         args: [selectedRoom.address, msgText],
       });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
