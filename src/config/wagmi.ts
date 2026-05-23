@@ -1,4 +1,5 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { createConfig } from '@privy-io/wagmi';
+import { http } from 'wagmi';
 import { type Chain } from 'viem';
 
 export const monadTestnet = {
@@ -14,8 +15,9 @@ export const monadTestnet = {
   testnet: true,
 } as const satisfies Chain;
 
-export const config = getDefaultConfig({
-  appName: 'AURA_OS',
-  projectId: 'YOUR_PROJECT_ID', // Replaced with a dummy project ID for test environments
+export const config = createConfig({
   chains: [monadTestnet],
+  transports: {
+    [monadTestnet.id]: http(),
+  },
 });
