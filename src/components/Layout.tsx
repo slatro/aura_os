@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Sparkles } from '@react-three/drei';
-import { Terminal, MessageSquare, Repeat, Zap, Wallet, User, Bell, Crosshair, Trophy, Activity, Cpu, PenTool, Sparkles as SparklesIcon } from 'lucide-react';
+import { Terminal, MessageSquare, Repeat, Zap, Wallet, User, Bell, Crosshair, Trophy, Activity, PenTool, Sparkles as SparklesIcon } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAura } from '../context/AuraContext';
 import { formatUnits } from 'viem';
@@ -84,7 +84,9 @@ export function Sidebar() {
     <div className="w-[280px] h-screen sticky top-0 flex flex-col py-4 pr-6">
       <div className="space-y-1">
         <div className="flex items-center space-x-3 mb-8 ml-2">
-          <div className="w-10 h-10 bg-[#09090b] border border-[#27272a] cyber-button flex items-center justify-center text-[#836EF9] shadow-[0_0_15px_rgba(131,110,249,0.15)]"><Cpu className="w-5 h-5" /></div>
+          <div className="w-10 h-10 overflow-hidden flex-shrink-0">
+            <img src="/logo.png" alt="AURA_OS Logo" className="w-full h-full object-contain" />
+          </div>
           <div className="flex flex-col">
             <span className="text-white font-bold tracking-widest uppercase text-sm">AURA_OS</span>
             <span className="text-[#836EF9] text-[10px] tracking-widest font-mono">V.3.0_TESTNET</span>
