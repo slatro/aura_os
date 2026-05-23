@@ -160,10 +160,13 @@ contract AuraNetwork {
     // =========================================================
 
     function getPrice(uint256 supply, uint256 amount) public pure returns (uint256) {
+        if (amount == 0) return 0;
+        uint256 basePriceTotal = amount * 0.05 ether;
         uint256 sum1 = supply == 0 ? 0 : (supply - 1) * (supply) * (2 * (supply - 1) + 1) / 6;
         uint256 sum2 = supply == 0 && amount == 1 ? 0 : (supply - 1 + amount) * (supply + amount) * (2 * (supply - 1 + amount) + 1) / 6;
         uint256 summation = sum2 - sum1;
-        return summation * 1 ether / 100;
+        uint256 curvePrice = summation * 1 ether / 100;
+        return basePriceTotal + curvePrice;
     }
 
     function getBuyPrice(address subject, uint256 amount) public view returns (uint256) {

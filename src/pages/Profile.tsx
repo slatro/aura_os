@@ -7,13 +7,11 @@ export default function Profile() {
   const { 
     fullProfile, 
     walletAddress, 
-    profileModalData, 
-    refetchProfileModal,
+    ownProfileData, 
+    refetchOwnProfileData,
     handleBuyKey, 
     handleSellKey, 
     isTrading,
-    publicProfile,
-    setPublicProfile,
     logout,
     user,
     linkTwitter,
@@ -22,16 +20,10 @@ export default function Profile() {
   } = useAura();
 
   useEffect(() => {
-    if (walletAddress && fullProfile) {
-      setPublicProfile({ address: walletAddress, ...fullProfile });
+    if (walletAddress) {
+      refetchOwnProfileData();
     }
-  }, [walletAddress, fullProfile, setPublicProfile]);
-
-  useEffect(() => {
-    if (publicProfile) {
-      refetchProfileModal();
-    }
-  }, [publicProfile, refetchProfileModal]);
+  }, [walletAddress, refetchOwnProfileData]);
 
   if (!fullProfile) {
     return (
@@ -109,7 +101,7 @@ export default function Profile() {
         </div>
 
         {/* Bonding Curve Section */}
-        {profileModalData && walletAddress && (
+        {ownProfileData && walletAddress && (
           <div className="bg-[#09090b] border border-[#27272a] cyber-button p-6 relative">
             <h2 className="text-[#836EF9] text-sm font-bold tracking-widest uppercase mb-6 flex items-center">
               <Crosshair className="w-4 h-4 mr-2" /> Your_Card_Market
@@ -119,36 +111,40 @@ export default function Profile() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-[#18181b]">
                   <span className="text-[#71717a] text-xs">Total Cards Supply</span>
-                  <span className="text-white text-sm font-bold">{Number((profileModalData as any)[1] || 0)}</span>
+                  <span className="text-white text-sm font-bold">{Number((ownProfileData as any)[1] || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-[#18181b]">
+                  <span className="text-[#71717a] text-xs">Market Cap (MCAP)</span>
+                  <span className="text-white text-sm font-bold text-[#836EF9]">{(Number((ownProfileData as any)[1] || 0) * Number(formatUnits((ownProfileData as any)[3] || 0n, 18))).toFixed(4)} MON</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-[#18181b]">
                   <span className="text-[#71717a] text-xs">Cards You Own</span>
-                  <span className="text-[#4ade80] text-sm font-bold">{Number((profileModalData as any)[2] || 0)}</span>
+                  <span className="text-[#4ade80] text-sm font-bold">{Number((ownProfileData as any)[2] || 0)}</span>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <button 
-                  onClick={() => handleBuyKey(walletAddress, (profileModalData as any)[3])} 
+                  onClick={() => handleBuyKey(walletAddress, (ownProfileData as any)[3])} 
                   disabled={isTrading} 
                   className="w-full bg-[#836EF9]/10 border border-[#836EF9]/50 text-[#836EF9] hover:bg-[#836EF9] hover:text-white font-bold py-3 cyber-button text-sm uppercase tracking-widest transition-all disabled:opacity-50"
                 >
                   <div className="flex flex-col items-center">
                     <span>{isTrading ? 'Signing...' : 'BUY OWN CARD'}</span>
                     <span className="text-[10px] font-mono mt-1 opacity-80 text-white">
-                      {Number(formatUnits((profileModalData as any)[3] || 0n, 18)).toFixed(5)} MON
+                      {Number(formatUnits((ownProfileData as any)[3] || 0n, 18)).toFixed(5)} MON
                     </span>
                   </div>
                 </button>
                 <button 
                   onClick={() => handleSellKey(walletAddress)} 
-                  disabled={isTrading || Number((profileModalData as any)[2]) === 0} 
+                  disabled={isTrading || Number((ownProfileData as any)[2]) === 0} 
                   className="w-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-[#050505] font-bold py-3 cyber-button text-sm uppercase tracking-widest transition-all disabled:opacity-50"
                 >
                   <div className="flex flex-col items-center">
                     <span>{isTrading ? 'Signing...' : 'SELL OWN CARD'}</span>
                     <span className="text-[10px] font-mono mt-1 opacity-80 text-white">
-                      {Number(formatUnits((profileModalData as any)[4] || 0n, 18)).toFixed(5)} MON
+                      {Number(formatUnits((ownProfileData as any)[4] || 0n, 18)).toFixed(5)} MON
                     </span>
                   </div>
                 </button>

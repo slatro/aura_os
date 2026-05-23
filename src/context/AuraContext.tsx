@@ -370,6 +370,12 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     query: { enabled: !!publicProfile && !!walletAddress },
   });
 
+  const { data: ownProfileData, refetch: refetchOwnProfileData } = useReadContract({
+    address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'getProfileData',
+    args: walletAddress ? [walletAddress, walletAddress] : undefined,
+    query: { enabled: !!walletAddress },
+  });
+
   // Derived data
   const posts = ((onChainPosts as any[]) || []).filter(p => p.content).map(p => ({ id: Number(p.id), authorAddr: p.author, content: p.content, timestamp: Number(p.timestamp), likes: Number(p.likes) }));
 
@@ -396,7 +402,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       alerts,
       holdings, holders, isPortfolioLoading, portfolioValue, fetchPortfolio,
       handleMintProfile, handleExecutePost, handleLikePost, handleBuyKey, handleSellKey, handleTip, openPublicProfile,
-      posts, radarProfiles, profileModalData, refetchProfileModal,
+      posts, radarProfiles, profileModalData, refetchProfileModal, ownProfileData, refetchOwnProfileData,
     }}>
       {children}
     </AuraContext.Provider>
