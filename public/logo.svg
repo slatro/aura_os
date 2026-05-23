@@ -1,31 +1,43 @@
 <svg width="200" height="200" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
-  <!-- Outer Hexagon -->
-  <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#836EF9" stroke-width="2" filter="url(#glow)"/>
-  
-  <!-- Inner lines creating 3D icosahedron effect -->
-  <!-- Top point to middle vertices -->
-  <line x1="50" y1="5" x2="30" y2="40" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="50" y1="5" x2="70" y2="40" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  
-  <!-- Bottom point to middle vertices -->
-  <line x1="50" y1="95" x2="30" y2="60" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="50" y1="95" x2="70" y2="60" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  
-  <!-- Middle hexagon/diamond -->
-  <line x1="30" y1="40" x2="70" y2="40" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="30" y1="60" x2="70" y2="60" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="30" y1="40" x2="10" y2="25" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="30" y1="60" x2="10" y2="75" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="70" y1="40" x2="90" y2="25" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="70" y1="60" x2="90" y2="75" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  
-  <!-- Vertical lines -->
-  <line x1="30" y1="40" x2="30" y2="60" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
-  <line x1="70" y1="40" x2="70" y2="60" stroke="#836EF9" stroke-width="1.5" filter="url(#glow)"/>
+
+  <g stroke="#836EF9" stroke-width="1.2" fill="none" filter="url(#glow)">
+    <!-- Outer Hexagon -->
+    <polygon points="50,5 89,27.5 89,72.5 50,95 11,72.5 11,27.5" />
+    
+    <!-- Inner Triangle (pointing down) -->
+    <polygon points="25,35.5 75,35.5 50,78.5" />
+    
+    <!-- Inner Triangle (pointing up) -->
+    <polygon points="25,64.5 75,64.5 50,21.5" />
+    
+    <!-- Vertical center line -->
+    <line x1="50" y1="5" x2="50" y2="95" />
+    
+    <!-- Diagonal lines across -->
+    <line x1="11" y1="27.5" x2="89" y2="72.5" />
+    <line x1="11" y1="72.5" x2="89" y2="27.5" />
+    
+    <!-- Horizontal middle line -->
+    <line x1="11" y1="50" x2="89" y2="50" />
+    
+    <!-- Connections to make it look like the generated image -->
+    <line x1="50" y1="5" x2="25" y2="35.5" />
+    <line x1="50" y1="5" x2="75" y2="35.5" />
+    
+    <line x1="50" y1="95" x2="25" y2="64.5" />
+    <line x1="50" y1="95" x2="75" y2="64.5" />
+    
+    <line x1="11" y1="27.5" x2="50" y2="21.5" />
+    <line x1="89" y1="27.5" x2="50" y2="21.5" />
+    
+    <line x1="11" y1="72.5" x2="50" y2="78.5" />
+    <line x1="89" y1="72.5" x2="50" y2="78.5" />
+    
+  </g>
 </svg>
