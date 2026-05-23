@@ -227,7 +227,7 @@ export function RightSidebar() {
 // REVEAL MODAL
 // =============================================
 export function RevealModal() {
-  const { showRevealModal, setShowRevealModal, fullProfile, isRevealed, isMinting } = useAura();
+  const { showRevealModal, setShowRevealModal, fullProfile, isRevealed, isMinting, handleMintProfile } = useAura();
   if (!showRevealModal) return null;
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md">
@@ -247,9 +247,13 @@ export function RevealModal() {
         <div className={`text-center mt-6 transition-opacity duration-700 ${isRevealed && fullProfile ? 'opacity-100' : 'opacity-0'} flex flex-col items-center`}>
           <div className="text-white text-3xl md:text-4xl font-bold uppercase tracking-[0.2em] mb-2" style={{ textShadow: `0 0 30px ${fullProfile?.tierColor}` }}>{fullProfile?.tierName}</div>
           <div className="text-lg md:text-xl font-mono mb-6" style={{ color: fullProfile?.tierColor }}>Aura: {fullProfile?.auraScore?.toLocaleString()}</div>
-          <div className="text-[#836EF9] font-mono text-xs uppercase tracking-widest animate-pulse border border-[#836EF9]/50 bg-[#836EF9]/10 py-2 px-6 cyber-button">
-            {isMinting ? 'AWAITING WALLET SIGNATURE...' : 'INITIATING ON-CHAIN MINT...'}
-          </div>
+          <button 
+            onClick={handleMintProfile}
+            disabled={isMinting}
+            className="text-[#836EF9] hover:bg-[#836EF9] hover:text-[#050505] font-bold font-mono text-xs uppercase tracking-widest border border-[#836EF9]/50 bg-[#836EF9]/10 py-3 px-8 cyber-button transition-all disabled:opacity-50"
+          >
+            {isMinting ? 'AWAITING WALLET SIGNATURE...' : 'EXECUTE_SEQUENCE (MINT)'}
+          </button>
         </div>
       </div>
     </div>

@@ -304,14 +304,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setIsRevealed(true), 3000);
   };
 
-  // Auto-mint after reveal
-  useEffect(() => {
-    if (isRevealed && fullProfile && showRevealModal) {
-      const timer = setTimeout(() => handleMintProfile(), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isRevealed, fullProfile, showRevealModal]);
-
+  // Manual minting is now required
   // Actions
   const handleMintProfile = async () => {
     if (!fullProfile) return;
