@@ -43,23 +43,23 @@ export default function Profile() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#050505] p-6 lg:p-10 font-mono">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-3xl mx-auto space-y-8">
         
         {/* Header Profile Section */}
-        <div className="bg-[#09090b] border border-[#27272a] cyber-button p-8 md:p-12 flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden">
+        <div className="bg-[#09090b] border border-[#27272a] cyber-button p-8 relative overflow-hidden flex flex-col items-center text-center">
           <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(135deg, transparent, ${fullProfile.tierColor})` }}></div>
           
-          <div className="w-40 h-40 md:w-48 md:h-48 border-4 overflow-hidden rounded-full shadow-2xl relative z-10 flex-shrink-0" style={{ borderColor: fullProfile.tierColor, boxShadow: `0 0 40px ${fullProfile.tierColor}40` }}>
+          <div className="w-32 h-32 md:w-40 md:h-40 border-4 overflow-hidden rounded-full shadow-2xl relative z-10 flex-shrink-0 mb-6" style={{ borderColor: fullProfile.tierColor, boxShadow: `0 0 40px ${fullProfile.tierColor}40` }}>
             <img src={fullProfile.avatar_url.replace('_normal', '')} alt="Avatar" className="w-full h-full object-cover" />
           </div>
           
-          <div className="flex-1 space-y-6 relative z-10 w-full text-center md:text-left mt-4 md:mt-0">
+          <div className="space-y-6 relative z-10 w-full max-w-xl mx-auto">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-white tracking-widest uppercase mb-2">{fullProfile.name}</h1>
               <div className="text-[#a1a1aa] text-lg">@{fullProfile.screen_name}</div>
             </div>
             
-            <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+            <div className="flex flex-wrap gap-3 justify-center">
               <span className="px-4 py-1.5 text-sm font-bold uppercase tracking-wider border" style={{ backgroundColor: `${fullProfile.tierColor}15`, color: fullProfile.tierColor, borderColor: `${fullProfile.tierColor}50` }}>
                 {fullProfile.tierLevel} // {fullProfile.tierName}
               </span>
@@ -68,40 +68,40 @@ export default function Profile() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[#27272a]">
-              <div>
-                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center md:justify-start"><Trophy className="w-3 h-3 mr-1" /> Aura</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-2 mt-8 pt-6 border-t border-[#27272a]">
+              <div className="bg-[#050505] border border-[#18181b] p-3 rounded-lg">
+                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center"><Trophy className="w-3 h-3 mr-1" /> Aura</div>
                 <div className="text-white font-bold" style={{ color: fullProfile.tierColor }}>{fullProfile.auraScore.toLocaleString()}</div>
               </div>
-              <div>
-                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center md:justify-start"><Wallet className="w-3 h-3 mr-1" /> Monad</div>
+              <div className="bg-[#050505] border border-[#18181b] p-3 rounded-lg">
+                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center"><Wallet className="w-3 h-3 mr-1" /> Monad</div>
                 <div className="text-white font-bold">{fullProfile.realData.balance.toFixed(4)}</div>
               </div>
-              <div>
-                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center md:justify-start"><Crosshair className="w-3 h-3 mr-1" /> Txs</div>
+              <div className="bg-[#050505] border border-[#18181b] p-3 rounded-lg">
+                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center"><Crosshair className="w-3 h-3 mr-1" /> Txs</div>
                 <div className="text-white font-bold">{fullProfile.realData.txCount.toLocaleString()}</div>
               </div>
-              <div>
-                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center md:justify-start">X Followers</div>
+              <div className="bg-[#050505] border border-[#18181b] p-3 rounded-lg">
+                <div className="text-[#71717a] text-[10px] uppercase mb-1 flex items-center justify-center">X Followers</div>
                 <div className="text-white font-bold">{fullProfile.followers.toLocaleString()}</div>
               </div>
             </div>
 
             {/* Privy Connection Management */}
-            <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-6 border-t border-[#27272a]">
+            <div className="flex flex-col md:flex-row gap-4 mt-6 pt-6 border-t border-[#27272a]">
               <button onClick={logout} className="flex-1 bg-[#18181b] border border-[#27272a] text-[#71717a] font-bold py-3 cyber-button text-xs uppercase tracking-widest flex items-center justify-center group hover:bg-red-500/10 hover:border-red-500 hover:text-red-500 transition-colors relative overflow-hidden">
-                <div className="flex items-center group-hover:opacity-0 transition-opacity"><Wallet className="w-4 h-4 mr-2" />Disconnect_Wallet</div>
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Repeat className="w-4 h-4 mr-2" />Change_Wallet</div>
+                <div className="flex items-center group-hover:opacity-0 transition-opacity"><Wallet className="w-4 h-4 mr-2" />Disconnect</div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Repeat className="w-4 h-4 mr-2" />Change Wallet</div>
               </button>
 
               {authenticated && user?.twitter ? (
                 <button onClick={() => { if (user?.twitter?.subject) unlinkTwitter(user.twitter.subject); }} className="flex-1 bg-[#1da1f2]/10 border border-[#1da1f2]/50 text-[#1da1f2] font-bold py-3 cyber-button text-xs uppercase tracking-widest flex items-center justify-center group hover:bg-red-500/20 hover:border-red-500 hover:text-red-500 transition-colors relative overflow-hidden">
                   <div className="flex items-center group-hover:opacity-0 transition-opacity"><User className="w-4 h-4 mr-2" />Linked: @{user.twitter.username}</div>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Repeat className="w-4 h-4 mr-2" />Unlink_X_Account</div>
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Repeat className="w-4 h-4 mr-2" />Unlink X</div>
                 </button>
               ) : (
                 <button onClick={() => linkTwitter()} className="flex-1 bg-[#18181b] border border-[#27272a] text-[#71717a] hover:text-[#1da1f2] hover:border-[#1da1f2] font-bold py-3 cyber-button text-xs uppercase tracking-widest flex items-center justify-center transition-colors">
-                  <Crosshair className="w-4 h-4 mr-2" />Link_X_Account
+                  <Crosshair className="w-4 h-4 mr-2" />Link X Account
                 </button>
               )}
             </div>
