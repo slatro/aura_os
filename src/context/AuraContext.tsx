@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useBalance, usePublicClient, useWriteContract, useReadContract, useWatchContractEvent, useSendTransaction } from 'wagmi';
 import { usePrivy } from '@privy-io/react-auth';
 import { formatUnits, parseEther, createPublicClient, http } from 'viem';
+import { monadTestnet } from 'viem/chains';
 import AuraNetworkABI from '../config/AuraNetworkABI.json';
 
 export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS as `0x${string}`;
