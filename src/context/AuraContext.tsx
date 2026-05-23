@@ -163,6 +163,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     abi: AuraNetworkABI,
     functionName: 'profiles',
     args: walletAddress ? [walletAddress] : undefined,
+    chainId: monadTestnet.id,
     query: { enabled: !!walletAddress }
   });
 
@@ -170,6 +171,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     address: CONTRACT_ADDRESS,
     abi: AuraNetworkABI,
     functionName: 'getRecentPosts',
+    chainId: monadTestnet.id,
     args: [50n],
   });
 
@@ -180,6 +182,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     address: CONTRACT_ADDRESS,
     abi: AuraNetworkABI,
     functionName: 'getAllProfiles',
+    chainId: monadTestnet.id,
   });
 
   // Alerts
@@ -275,7 +278,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   // Load on-chain profile or trigger reveal
   useEffect(() => {
     if (!authenticated || !walletAddress) { setFullProfile(null); setXFollowers(0); return; }
-    if (isProfileLoading || onChainProfile === undefined) return;
+    if (isProfileLoading) return;
     const profileData = onChainProfile as any;
     if (profileData && profileData[4] === true) {
       const dbTierName = profileData[1];
