@@ -53,7 +53,7 @@ function SideNavLink({ icon, label, to }: { icon: React.ReactNode; label: string
 // =============================================
 export function Sidebar() {
   const navigate = useNavigate();
-  const { authenticated, user, walletAddress, login, logout, linkTwitter, unlinkTwitter, fullProfile, showRevealModal, onChainProfile, openPublicProfile } = useAura();
+  const { authenticated, user, walletAddress, login, logout, linkTwitter, unlinkTwitter, linkWallet, fullProfile, showRevealModal, onChainProfile, openPublicProfile } = useAura();
 
   const renderConnectionButtons = () => (
     <div className="space-y-3">
@@ -63,7 +63,7 @@ export function Sidebar() {
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Repeat className="w-4 h-4 mr-2" />Change_Wallet</div>
         </button>
       ) : (
-        <button onClick={login} className="w-full bg-[#836EF9]/10 border border-[#836EF9]/50 text-[#836EF9] hover:bg-[#836EF9] hover:text-white font-bold py-2.5 cyber-button text-xs uppercase tracking-widest transition-all flex items-center justify-center shadow-[0_0_10px_rgba(131,110,249,0.2)]">
+        <button onClick={authenticated ? linkWallet : login} className="w-full bg-[#836EF9]/10 border border-[#836EF9]/50 text-[#836EF9] hover:bg-[#836EF9] hover:text-white font-bold py-2.5 cyber-button text-xs uppercase tracking-widest transition-all flex items-center justify-center shadow-[0_0_10px_rgba(131,110,249,0.2)]">
           <Wallet className="w-4 h-4 mr-2" />Link_Wallet
         </button>
       )}

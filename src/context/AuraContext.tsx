@@ -62,6 +62,7 @@ interface AuraContextType {
   logout: () => void;
   linkTwitter: () => void;
   unlinkTwitter: (subject: string) => void;
+  linkWallet: () => void;
 
   // Wallet
   walletAddress: `0x${string}` | undefined;
@@ -135,7 +136,7 @@ export function useAura() {
 
 export function AuraProvider({ children }: { children: ReactNode }) {
   const publicClient = usePublicClient();
-  const { ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter } = usePrivy();
+  const { ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter, linkWallet } = usePrivy();
   const walletAddress = user?.wallet?.address as `0x${string}` | undefined;
   const { data: balanceData } = useBalance({ address: walletAddress });
 
@@ -391,7 +392,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuraContext.Provider value={{
-      ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter,
+      ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter, linkWallet,
       walletAddress, balanceData, mainnetTxCount, mainnetBalance,
       publicClient, writeContractAsync, sendTransactionAsync,
       onChainProfile, onChainPosts, allProfilesData, refetchProfile, refetchPosts, refetchRadar,
