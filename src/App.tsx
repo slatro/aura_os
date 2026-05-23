@@ -62,6 +62,7 @@ function AppShell() {
             <Route path="/rooms" element={<Rooms />} />
             <Route path="/new-cards" element={<NewCards />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:address" element={<Profile />} />
             <Route path="*" element={<Navigate to="/stream" replace />} />
           </Routes>
         </div>
