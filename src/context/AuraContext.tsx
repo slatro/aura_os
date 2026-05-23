@@ -273,7 +273,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     if (profileData && profileData[4] === true) {
       const dbTierName = profileData[1];
       const dbTierColor = dbTierName === 'Shark' ? '#FF5E00' : profileData[2];
-      setFullProfile({ name: profileData[0], screen_name: profileData[0], avatar_url: user?.twitter?.profilePictureUrl || '', followers: xFollowers || 0, following: xFollowing, realData: { balance: mainnetBalance, symbol: 'MON', txCount: mainnetTxCount }, auraScore: Number(profileData[3]), tierName: dbTierName, tierLevel: 'ON-CHAIN', tierColor: dbTierColor });
+      setFullProfile({ name: profileData[0], screen_name: profileData[0], avatar_url: user?.twitter?.profilePictureUrl || `https://unavatar.io/twitter/${profileData[0]}`, followers: xFollowers || 0, following: xFollowing, realData: { balance: mainnetBalance, symbol: 'MON', txCount: mainnetTxCount }, auraScore: Number(profileData[3]), tierName: dbTierName, tierLevel: 'ON-CHAIN', tierColor: dbTierColor });
       setShowRevealModal(false);
     } else if (user?.twitter && xFollowers !== null && balanceData !== undefined && !showRevealModal && !fullProfile) {
       calculateAndReveal();
