@@ -53,7 +53,7 @@ function SideNavLink({ icon, label, to }: { icon: React.ReactNode; label: string
 // =============================================
 export function Sidebar() {
   const navigate = useNavigate();
-  const { authenticated, user, walletAddress, login, logout, linkTwitter, unlinkTwitter, fullProfile, showRevealModal, onChainProfile } = useAura();
+  const { authenticated, user, walletAddress, login, logout, linkTwitter, unlinkTwitter, fullProfile, showRevealModal, onChainProfile, openPublicProfile } = useAura();
 
   const renderConnectionButtons = () => (
     <div className="space-y-3">
@@ -116,7 +116,8 @@ export function Sidebar() {
 
       <div className="mt-auto mb-8 ml-2">
         {fullProfile && !showRevealModal ? (
-          <div onClick={() => navigate('/profile')} className="bg-[#09090b] border border-[#27272a] hover:border-[#52525b] cyber-button p-3 flex items-center justify-between cursor-pointer group transition-all relative overflow-hidden">
+          <div onClick={() => openPublicProfile(walletAddress, fullProfile)} className="bg-[#09090b] border border-[#27272a] hover:border-[#52525b] cyber-button p-3 flex items-center justify-between cursor-pointer group transition-all relative overflow-hidden">
+
             <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(135deg, transparent, ${fullProfile.tierColor})` }}></div>
             <div className="flex items-center space-x-3 relative z-10">
               <div className="w-10 h-10 border-2 overflow-hidden rounded-full shadow-lg" style={{ borderColor: fullProfile.tierColor }}>
