@@ -3,6 +3,7 @@ import { MessageSquare, Send, Lock, Hash } from 'lucide-react';
 import { useAura, CONTRACT_ADDRESS } from '../context/AuraContext';
 import AuraNetworkABI from '../config/AuraNetworkABI.json';
 import { monadTestnet } from 'viem/chains';
+import { useSwitchChain, useAccount } from 'wagmi';
 
 function getInitials(address: string): string {
   return address ? address.slice(2, 4).toUpperCase() : '??';
@@ -31,6 +32,9 @@ export default function Rooms() {
     publicClient,
     writeContractAsync,
   } = useAura();
+
+  const { switchChainAsync } = useSwitchChain();
+  const { chain } = useAccount();
 
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [roomMessages, setRoomMessages] = useState<any[]>([]);
@@ -167,6 +171,9 @@ export default function Rooms() {
     setRoomMessages((prev) => [...prev, optimisticMsg]);
 
     try {
+      if (chain?.id !== monadTestnet.id && switchChainAsync) {
+        await switchChainAsync({ chainId: monadTestnet.id });
+      }
       const tx = await writeContractAsync({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: AuraNetworkABI,

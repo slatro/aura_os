@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useBalance, usePublicClient, useWriteContract, useReadContract, useWatchContractEvent, useSendTransaction } from 'wagmi';
+import { useBalance, usePublicClient, useWriteContract, useReadContract, useWatchContractEvent, useSendTransaction, useSwitchChain, useAccount } from 'wagmi';
 import { usePrivy } from '@privy-io/react-auth';
 import { formatUnits, parseEther, createPublicClient, http } from 'viem';
 import { monadTestnet } from 'viem/chains';
@@ -177,6 +177,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   });
 
   const { writeContractAsync } = useWriteContract();
+  const { switchChainAsync } = useSwitchChain();
+  const { chain } = useAccount();
   const { sendTransactionAsync } = useSendTransaction();
 
   const { data: allProfilesData, refetch: refetchRadar } = useReadContract({
@@ -305,11 +307,18 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   };
 
   // Manual minting is now required
+  const ensureMonadNetwork = async () => {
+    if (chain?.id !== monadTestnet.id && switchChainAsync) {
+      await switchChainAsync({ chainId: monadTestnet.id });
+    }
+  };
+
   // Actions
   const handleMintProfile = async () => {
     if (!fullProfile) return;
     try {
       setIsMinting(true);
+      await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'registerProfile', chainId: monadTestnet.id, args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, BigInt(Math.floor(fullProfile.auraScore))] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfile(); await refetchRadar();
@@ -324,6 +333,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     const safeContent = sanitizeText(text, 1000);
     if (!safeContent) return;
     try {
+      await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'executePost', chainId: monadTestnet.id, args: [safeContent] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchPosts();
@@ -333,6 +343,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const handleLikePost = async (postId: number) => {
     try {
       setLikingPostId(postId);
+      await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'likePost', chainId: monadTestnet.id, args: [postId] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchPosts();
@@ -342,6 +353,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const handleBuyKey = async (address: string, price: bigint) => {
     try {
       setIsTrading(true);
+      await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'buyKey', chainId: monadTestnet.id, args: [address], value: price });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfileModal();
@@ -351,6 +363,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const handleSellKey = async (address: string) => {
     try {
       setIsTrading(true);
+      await ensureMonadNetwork();
       const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'sellKey', chainId: monadTestnet.id, args: [address] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfileModal();
@@ -358,9 +371,12 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   };
 
   const handleTip = async (toAddress: string) => {
+    if (!toAddress || toAddress.toLowerCase() === walletAddress?.toLowerCase()) return;
     try {
       setIsTipping(true);
-      const tx = await sendTransactionAsync({ to: toAddress as `0x${string}`, value: parseEther('0.1') });
+      await ensureMonadNetwork();
+      const tx = await sendTransactionAsync({
+        to: toAddress as `0x${string}`, value: parseEther('0.1') });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       alert("Tip successful!");
     } catch (e) { console.error("Tip failed", e); } finally { setIsTipping(false); }
