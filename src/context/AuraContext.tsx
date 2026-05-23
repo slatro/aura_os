@@ -274,7 +274,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
 
   // Load on-chain profile or trigger reveal
   useEffect(() => {
-    if (!authenticated || !walletAddress) { setFullProfile(null); setXFollowers(null); return; }
+    if (!authenticated || !walletAddress) { setFullProfile(null); setXFollowers(0); return; }
     if (isProfileLoading || onChainProfile === undefined) return;
     const profileData = onChainProfile as any;
     if (profileData && profileData[4] === true) {
