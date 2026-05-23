@@ -310,11 +310,14 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     if (!fullProfile) return;
     try {
       setIsMinting(true);
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'registerProfile', chainId: monadTestnet.id, args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, fullProfile.auraScore] });
+      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'registerProfile', chainId: monadTestnet.id, args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, BigInt(Math.floor(fullProfile.auraScore))] });
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       await refetchProfile(); await refetchRadar();
       setShowRevealModal(false); setShowProfileModal(true);
-    } catch (e) { console.error(e); } finally { setIsMinting(false); }
+    } catch (e: any) { 
+      console.error(e); 
+      alert("Mint failed: " + (e.shortMessage || e.message));
+    } finally { setIsMinting(false); }
   };
 
   const handleExecutePost = async (text: string) => {
