@@ -360,7 +360,6 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   };
 
   const openPublicProfile = (address: string, profileData: any) => {
-    if (walletAddress && address.toLowerCase() === walletAddress.toLowerCase()) { setShowProfileModal(true); return; }
     setPublicProfile({ address, ...profileData });
   };
 
