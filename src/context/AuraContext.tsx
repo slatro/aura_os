@@ -104,7 +104,7 @@ interface AuraContextType {
 
   // Alerts
   alerts: any[];
-  addAlert: (type: string, message: string, color: string) => void;
+  addAlert: (type: string, message: string, color: string, dedupKey?: string, isHistorical?: boolean) => void;
   addGlobalNotification: (targetAddress: string, type: string, message: string, color: string) => Promise<void>;
   unreadRoomsCount: number;
   clearUnreadRooms: () => void;
@@ -231,18 +231,27 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   // Alerts
   const [alerts, setAlerts] = useState<any[]>([]);
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
-  const clearUnreadAlerts = () => setUnreadAlertsCount(0);
+  const clearUnreadAlerts = () => {
+    setUnreadAlertsCount(0);
+    localStorage.setItem('aura_alerts_last_seen', Date.now().toString());
+  };
   // Track seen event tx hashes to avoid duplicate alerts across historical + real-time
   const seenEventHashes = new Set<string>();
 
-  const addAlert = (type: string, message: string, color: string, dedupKey?: string) => {
+  const addAlert = (type: string, message: string, color: string, dedupKey?: string, isHistorical?: boolean) => {
     if (dedupKey) {
       if (seenEventHashes.has(dedupKey)) return;
       seenEventHashes.add(dedupKey);
     }
-    setAlerts(prev => [{ id: Date.now() + Math.random(), type, message, color, time: new Date() }, ...prev].slice(0, 100));
-    if (window.location.pathname !== '/alerts') {
-      setUnreadAlertsCount(prev => prev + 1);
+    const alertTime = new Date();
+    setAlerts(prev => [{ id: Date.now() + Math.random(), type, message, color, time: alertTime }, ...prev].slice(0, 100));
+    
+    if (!isHistorical && window.location.pathname !== '/alerts') {
+      const lastSeenStr = localStorage.getItem('aura_alerts_last_seen');
+      const lastSeen = lastSeenStr ? Number(lastSeenStr) : 0;
+      if (alertTime.getTime() > lastSeen) {
+        setUnreadAlertsCount(prev => prev + 1);
+      }
     }
   };
 
@@ -314,7 +323,11 @@ export function AuraProvider({ children }: { children: ReactNode }) {
             
             // Increment unread count if not on alerts page
             if (typeof window !== 'undefined' && window.location.pathname !== '/alerts') {
-              setUnreadAlertsCount(c => c + formattedNewNotifs.length);
+              const lastSeenStr = localStorage.getItem('aura_alerts_last_seen');
+              const lastSeen = lastSeenStr ? Number(lastSeenStr) : 0;
+              
+              const trulyNewNotifs = formattedNewNotifs.filter(n => (n.timestamp * 1000) > lastSeen);
+              setUnreadAlertsCount(c => c + trulyNewNotifs.length);
             }
             
             // Merge and sort
@@ -382,7 +395,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
             const traderProfile = radarProfiles.find(p => p.address?.toLowerCase() === trader?.toLowerCase());
             const traderName = traderProfile?.username ? `@${traderProfile.username}` : `${trader.slice(0,6)}...`;
             const key = log.transactionHash + log.logIndex;
-            addAlert('MARKET_TRADE', `${traderName} ${isBuy ? 'BOUGHT' : 'SOLD'} your Card for ${amt} MON`, '#FFD700', key);
+            addAlert('MARKET_TRADE', `${traderName} ${isBuy ? 'BOUGHT' : 'SOLD'} your Card for ${amt} MON`, '#FFD700', key, true);
           });
         }
 
@@ -415,7 +428,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
               const likerProfile = radarProfiles.find(p => p.address?.toLowerCase() === liker?.toLowerCase());
               const likerName = likerProfile?.username ? `@${likerProfile.username}` : `${liker.slice(0,6)}...`;
               const key = log.transactionHash + log.logIndex;
-              addAlert('RESONANCE', `${likerName} resonated with your signal #${id}!`, '#FF3366', key);
+              addAlert('RESONANCE', `${likerName} resonated with your signal #${id}!`, '#FF3366', key, true);
             });
           }
         }
