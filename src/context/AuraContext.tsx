@@ -1,11 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useBalance, usePublicClient, useWriteContract, useReadContract, useWatchContractEvent, useSendTransaction, useSwitchChain, useAccount } from 'wagmi';
-import { usePrivy } from '@privy-io/react-auth';
-import { formatUnits, parseEther, createPublicClient, http } from 'viem';
+import { useBalance, usePublicClient, useReadContract, useWatchContractEvent, useDisconnect, useAccount } from 'wagmi';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { formatUnits, parseEther, createPublicClient, http, getAddress, createWalletClient, custom } from 'viem';
 import { monadTestnet } from 'viem/chains';
 import AuraNetworkABI from '../config/AuraNetworkABI.json';
 
-export const CONTRACT_ADDRESS = '0x1b95c26d7e01a215f57ce3f5f5ce512430bc4139' as `0x${string}`;
+export const CONTRACT_ADDRESS = '0x78c3a7B0cb1b454Ac329402a372A4E049D3f15fD' as `0x${string}`;
 
 // =============================================
 // SECURITY HELPERS
@@ -64,6 +64,8 @@ interface AuraContextType {
   linkTwitter: () => void;
   unlinkTwitter: (subject: string) => void;
   linkWallet: () => void;
+  unlinkWallet: (address: string) => void;
+  wallets: any[];
 
   // Wallet
   walletAddress: `0x${string}` | undefined;
@@ -73,8 +75,6 @@ interface AuraContextType {
 
   // Contract
   publicClient: any;
-  writeContractAsync: any;
-  sendTransactionAsync: any;
   onChainProfile: any;
   onChainPosts: any;
   allProfilesData: any;
@@ -104,6 +104,11 @@ interface AuraContextType {
 
   // Alerts
   alerts: any[];
+  addAlert: (type: string, message: string, color: string) => void;
+  unreadRoomsCount: number;
+  clearUnreadRooms: () => void;
+  unreadAlertsCount: number;
+  clearUnreadAlerts: () => void;
 
   // Portfolio
   holdings: any[];
@@ -114,11 +119,12 @@ interface AuraContextType {
 
   // Actions
   handleMintProfile: () => Promise<void>;
+  handleUpdateProfile: (tierName: string, tierColor: string, score: number) => Promise<void>;
   handleExecutePost: (text: string) => Promise<void>;
   handleLikePost: (postId: number) => Promise<void>;
   handleBuyKey: (address: string, price: bigint) => Promise<void>;
   handleSellKey: (address: string) => Promise<void>;
-  handleTip: (toAddress: string) => Promise<void>;
+  handleTip: (toAddress: string, amount?: string) => Promise<void>;
   openPublicProfile: (address: string, profileData: any) => void;
 
   // Derived
@@ -140,12 +146,41 @@ export function useAura() {
 
 export function AuraProvider({ children }: { children: ReactNode }) {
   const publicClient = usePublicClient({ chainId: monadTestnet.id });
-  const { ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter, linkWallet } = usePrivy();
-  const walletAddress = user?.wallet?.address as `0x${string}` | undefined;
+  const { ready, authenticated, user, login, logout: privyLogout, linkTwitter, unlinkTwitter, linkWallet, unlinkWallet } = usePrivy();
+  const { wallets } = useWallets();
+  const { disconnect } = useDisconnect();
+  const { address: wagmiAddress } = useAccount();
+
+  const getWalletClient = async () => {
+    const activeWallet = wallets.find(w => w.address.toLowerCase() === walletAddress?.toLowerCase()) || wallets[0];
+    if (!activeWallet) {
+      throw new Error("No active wallet connected. Please click the pulsing 'Connect Wallet' button in the sidebar first!");
+    }
+    if (activeWallet.chainId !== `eip155:${monadTestnet.id}`) {
+      try {
+        await activeWallet.switchChain(monadTestnet.id);
+      } catch (err) {
+        console.error("Failed to switch chain via Privy wallet:", err);
+      }
+    }
+    const provider = await activeWallet.getEthereumProvider();
+    return createWalletClient({
+      account: activeWallet.address as `0x${string}`,
+      chain: monadTestnet,
+      transport: custom(provider)
+    });
+  };
+
+  const logout = () => {
+    try { privyLogout(); } catch (e) { console.error(e); }
+    try { disconnect(); } catch (e) { console.error(e); }
+  };
+  const walletAddress = (wagmiAddress || user?.wallet?.address) as `0x${string}` | undefined;
   const { data: balanceData } = useBalance({ address: walletAddress });
 
   const [mainnetTxCount, setMainnetTxCount] = useState<number>(0);
   const [mainnetBalance, setMainnetBalance] = useState<number>(0);
+  const [hasFetchedMainnet, setHasFetchedMainnet] = useState(false);
 
   useEffect(() => {
     if (walletAddress) {
@@ -155,7 +190,13 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       ]).then(([nonce, bal]) => {
         setMainnetTxCount(nonce);
         setMainnetBalance(Number(formatUnits(bal, 18)));
-      }).catch(err => console.error("Error fetching mainnet data", err));
+        setHasFetchedMainnet(true);
+      }).catch(err => {
+        console.error("Error fetching mainnet data", err);
+        setHasFetchedMainnet(true);
+      });
+    } else {
+      setHasFetchedMainnet(false);
     }
   }, [walletAddress]);
 
@@ -177,10 +218,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     args: [50n],
   });
 
-  const { writeContractAsync } = useWriteContract();
-  const { switchChainAsync } = useSwitchChain();
-  const { chain } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+
 
   const { data: allProfilesData, refetch: refetchRadar } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -191,21 +229,183 @@ export function AuraProvider({ children }: { children: ReactNode }) {
 
   // Alerts
   const [alerts, setAlerts] = useState<any[]>([]);
-  const addAlert = (type: string, message: string, color: string) => {
-    setAlerts(prev => [{ id: Date.now() + Math.random(), type, message, color, time: new Date() }, ...prev].slice(0, 50));
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
+  const clearUnreadAlerts = () => setUnreadAlertsCount(0);
+  // Track seen event tx hashes to avoid duplicate alerts across historical + real-time
+  const seenEventHashes = new Set<string>();
+
+  const addAlert = (type: string, message: string, color: string, dedupKey?: string) => {
+    if (dedupKey) {
+      if (seenEventHashes.has(dedupKey)) return;
+      seenEventHashes.add(dedupKey);
+    }
+    setAlerts(prev => [{ id: Date.now() + Math.random(), type, message, color, time: new Date() }, ...prev].slice(0, 100));
+    if (window.location.pathname !== '/alerts') {
+      setUnreadAlertsCount(prev => prev + 1);
+    }
   };
 
+  // ── HISTORICAL ALERT LOADER ──────────────────────────────────────────────
+  // Runs whenever wallet connects. Fetches recent past events so the user
+  // sees notifications for things that happened before they opened the app.
+  useEffect(() => {
+    if (!walletAddress || !publicClient) return;
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      try {
+        // Get current block then look back ~100k blocks (testnet is fast)
+        const latestBlock = await publicClient.getBlockNumber();
+        const fromBlock = latestBlock > 100000n ? latestBlock - 100000n : 0n;
+
+        // ── 1. Trade events where YOUR card was bought/sold ─────────────
+        const tradeLogs = await publicClient.getLogs({
+          address: CONTRACT_ADDRESS,
+          event: {
+            type: 'event', name: 'Trade',
+            inputs: [
+              { name: 'trader',      type: 'address', indexed: true },
+              { name: 'subject',     type: 'address', indexed: true },
+              { name: 'isBuy',       type: 'bool',    indexed: false },
+              { name: 'shareAmount', type: 'uint256', indexed: false },
+              { name: 'ethAmount',   type: 'uint256', indexed: false },
+              { name: 'supply',      type: 'uint256', indexed: false },
+            ]
+          },
+          args: { subject: walletAddress as `0x${string}` },
+          fromBlock,
+        });
+
+        if (!cancelled) {
+          // Sort oldest first so newest end up at top of alerts array
+          [...tradeLogs].reverse().forEach((log: any) => {
+            const { trader, isBuy, ethAmount } = log.args;
+            if (trader?.toLowerCase() === walletAddress.toLowerCase()) return; // own action
+            const amt = Number(formatUnits(ethAmount, 18)).toFixed(5);
+            const traderProfile = radarProfiles.find(p => p.address?.toLowerCase() === trader?.toLowerCase());
+            const traderName = traderProfile?.username ? `@${traderProfile.username}` : `${trader.slice(0,6)}...`;
+            const key = log.transactionHash + log.logIndex;
+            addAlert('MARKET_TRADE', `${traderName} ${isBuy ? 'BOUGHT' : 'SOLD'} your Card for ${amt} MON`, '#FFD700', key);
+          });
+        }
+
+        // ── 2. PostLiked events on YOUR posts ───────────────────────────
+        // First figure out which post IDs belong to this wallet
+        const myPostIds = new Set(
+          ((onChainPosts as any[]) || [])
+            .filter(p => p.author?.toLowerCase() === walletAddress.toLowerCase())
+            .map(p => Number(p.id))
+        );
+
+        if (myPostIds.size > 0) {
+          const likeLogs = await publicClient.getLogs({
+            address: CONTRACT_ADDRESS,
+            event: {
+              type: 'event', name: 'PostLiked',
+              inputs: [
+                { name: 'id',   type: 'uint256', indexed: true },
+                { name: 'user', type: 'address', indexed: true },
+              ]
+            },
+            fromBlock,
+          });
+
+          if (!cancelled) {
+            [...likeLogs].reverse().forEach((log: any) => {
+              const { id, user: liker } = log.args;
+              if (liker?.toLowerCase() === walletAddress.toLowerCase()) return;
+              if (!myPostIds.has(Number(id))) return;
+              const likerProfile = radarProfiles.find(p => p.address?.toLowerCase() === liker?.toLowerCase());
+              const likerName = likerProfile?.username ? `@${likerProfile.username}` : `${liker.slice(0,6)}...`;
+              const key = log.transactionHash + log.logIndex;
+              addAlert('RESONANCE', `${likerName} resonated with your signal #${id}!`, '#FF3366', key);
+            });
+          }
+        }
+
+      } catch (err) {
+        console.error('Failed to load historical alerts:', err);
+      }
+    };
+
+    // Small delay so posts/radarProfiles state has time to populate first
+    const timer = setTimeout(loadHistory, 2000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletAddress]);
+
+  // ── REAL-TIME WATCHERS ───────────────────────────────────────────────────
   useWatchContractEvent({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, eventName: 'ProfileRegistered',
-    onLogs(logs) { logs.forEach((log: any) => { const { username, score } = log.args; addAlert('NEW_IDENTITY', `@${username} joined the grid (Aura: ${score})`, '#4ade80'); }); },
+    onLogs(logs) {
+      logs.forEach((log: any) => {
+        const { user: eventUser, username, score } = log.args;
+        if (eventUser && walletAddress && eventUser.toLowerCase() === walletAddress.toLowerCase()) return;
+        const key = (log as any).transactionHash + (log as any).logIndex;
+        addAlert('NEW_IDENTITY', `@${username} joined the grid (Aura: ${score})`, '#4ade80', key);
+      });
+    },
   });
+
   useWatchContractEvent({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, eventName: 'PostCreated',
-    onLogs(logs) { logs.forEach((log: any) => { const { author } = log.args; addAlert('BROADCAST', `New signal detected from ${author.slice(0,6)}...`, '#00E5FF'); }); },
+    onLogs(logs) {
+      logs.forEach((log: any) => {
+        const { author } = log.args;
+        if (author && walletAddress && author.toLowerCase() === walletAddress.toLowerCase()) return;
+        const key = (log as any).transactionHash + (log as any).logIndex;
+        const authorProfile = radarProfiles.find(p => p.address?.toLowerCase() === author?.toLowerCase());
+        const authorName = authorProfile?.username ? `@${authorProfile.username}` : `${author.slice(0,6)}...`;
+        addAlert('BROADCAST', `New signal from ${authorName}.`, '#00E5FF', key);
+      });
+    },
   });
+
   useWatchContractEvent({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, eventName: 'PostLiked',
-    onLogs(logs) { logs.forEach((log: any) => { const { id, user } = log.args; addAlert('RESONANCE', `Signal #${id} resonated with ${user.slice(0,6)}...`, '#FF3366'); }); },
+    onLogs(logs) {
+      logs.forEach((log: any) => {
+        const { id, user: liker } = log.args;
+        if (liker && walletAddress && liker.toLowerCase() === walletAddress.toLowerCase()) return;
+        const post = posts.find(p => p.id === Number(id));
+        const isMyPost = post && walletAddress && post.authorAddr?.toLowerCase() === walletAddress.toLowerCase();
+        if (isMyPost) {
+          const key = (log as any).transactionHash + (log as any).logIndex;
+          const likerProfile = radarProfiles.find(p => p.address?.toLowerCase() === liker?.toLowerCase());
+          const likerName = likerProfile?.username ? `@${likerProfile.username}` : `${liker.slice(0,6)}...`;
+          addAlert('RESONANCE', `${likerName} resonated with your signal #${id}!`, '#FF3366', key);
+        }
+      });
+    },
   });
+
   useWatchContractEvent({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, eventName: 'Trade',
-    onLogs(logs) { logs.forEach((log: any) => { const { trader, subject, isBuy, ethAmount } = log.args; const amt = Number(formatUnits(ethAmount, 18)).toFixed(5); addAlert('MARKET_TRADE', `${trader.slice(0,6)} ${isBuy ? 'BOUGHT' : 'SOLD'} a Card from ${subject.slice(0,6)} for ${amt} MON`, '#FFD700'); }); },
+    onLogs(logs) {
+      logs.forEach((log: any) => {
+        const { trader, subject, isBuy, ethAmount } = log.args;
+        if (trader && walletAddress && trader.toLowerCase() === walletAddress.toLowerCase()) return;
+        if (subject && walletAddress && subject.toLowerCase() === walletAddress.toLowerCase()) {
+          const key = (log as any).transactionHash + (log as any).logIndex;
+          const amt = Number(formatUnits(ethAmount, 18)).toFixed(5);
+          const traderProfile = radarProfiles.find(p => p.address?.toLowerCase() === trader?.toLowerCase());
+          const traderName = traderProfile?.username ? `@${traderProfile.username}` : `${trader.slice(0,6)}...`;
+          addAlert('MARKET_TRADE', `${traderName} ${isBuy ? 'BOUGHT' : 'SOLD'} your Card for ${amt} MON`, '#FFD700', key);
+        }
+      });
+    },
+  });
+
+  const [unreadRoomsCount, setUnreadRoomsCount] = useState(0);
+  const clearUnreadRooms = () => setUnreadRoomsCount(0);
+
+  useWatchContractEvent({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, eventName: 'RoomMessage',
+    onLogs(logs) {
+      logs.forEach((log: any) => {
+        const { room, sender } = log.args;
+        if (sender && walletAddress && sender.toLowerCase() !== walletAddress.toLowerCase()) {
+          const key = (log as any).transactionHash + (log as any).logIndex;
+          setUnreadRoomsCount(prev => prev + 1);
+          addAlert('ROOM', `New signal in Room ${room.slice(0,6)}...`, '#836EF9', key);
+        }
+      });
+    },
   });
 
   // Profile state
@@ -214,6 +414,14 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const [isRevealed, setIsRevealed] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [publicProfile, setPublicProfile] = useState<any>(null);
+
+  // Clear cached profile when wallet changes
+  useEffect(() => {
+    setFullProfile(null);
+    setShowRevealModal(false);
+    setIsRevealed(false);
+  }, [walletAddress]);
+
   const [isMinting, setIsMinting] = useState(false);
   const [isMining, setIsMining] = useState(false);
   const [isTrading, setIsTrading] = useState(false);
@@ -233,44 +441,147 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     if (!walletAddress || !publicClient) return;
     try {
       setIsPortfolioLoading(true);
-      const logs = await publicClient.getLogs({
-        address: CONTRACT_ADDRESS as `0x${string}`,
-        event: AuraNetworkABI.find((a: any) => a.name === 'Trade') as any,
-        fromBlock: 0n, toBlock: 'latest'
-      });
+
       const myHoldings: Record<string, { amount: number }> = {};
       const myHolders: Record<string, number> = {};
-      logs.forEach((log: any) => {
-        const { trader, subject, isBuy, shareAmount } = log.args;
-        if (!trader || !subject) return;
-        const t = trader.toLowerCase(), s = subject.toLowerCase(), me = walletAddress.toLowerCase();
-        const amount = Number(shareAmount);
-        if (t === me) { if (!myHoldings[s]) myHoldings[s] = { amount: 0 }; isBuy ? (myHoldings[s].amount += amount) : (myHoldings[s].amount -= amount); }
-        if (s === me) { if (!myHolders[t]) myHolders[t] = 0; isBuy ? (myHolders[t] += amount) : (myHolders[t] -= amount); }
-      });
-      const holdingsArr = [];
-      let totalVal = 0;
-      for (const [subj, data] of Object.entries(myHoldings)) {
-        if (data.amount > 0) {
-          try {
-            const priceData = await publicClient.readContract({ address: CONTRACT_ADDRESS as `0x${string}`, abi: AuraNetworkABI, functionName: 'getSellPrice', args: [subj, 1n] });
-            const priceInMon = Number(formatUnits(priceData as bigint, 18));
-            totalVal += priceInMon * data.amount;
-            holdingsArr.push({ address: subj, amount: data.amount, sellPrice: priceInMon });
-          } catch(e) {}
+
+      // 1. Fetch all registered addresses on-chain to know whose cards exist
+      let addresses: string[] = [];
+      try {
+        const profilesResult = await publicClient.readContract({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi: AuraNetworkABI,
+          functionName: 'getAllProfiles',
+        }) as any;
+        if (profilesResult && profilesResult[0]) {
+          addresses = profilesResult[0] as string[];
+        }
+      } catch (err) {
+        console.error("Failed to fetch all profiles in fetchPortfolio", err);
+      }
+
+      // Ensure own address is always checked
+      const uniqueAddresses = Array.from(
+        new Set([
+          walletAddress.toLowerCase(),
+          ...addresses.map((a) => a.toLowerCase()),
+        ])
+      );
+
+      // 2. Query keysBalance for all addresses using a SINGLE multicall call to avoid rate limits
+      const contracts = [];
+      for (const addr of uniqueAddresses) {
+        try {
+          const checksummedSubject = getAddress(addr);
+          const checksummedWallet = getAddress(walletAddress);
+
+          // Query our balance of their card
+          contracts.push({
+            address: CONTRACT_ADDRESS,
+            abi: AuraNetworkABI as any,
+            functionName: 'keysBalance',
+            args: [checksummedSubject, checksummedWallet],
+          });
+
+          // Query their balance of our card
+          contracts.push({
+            address: CONTRACT_ADDRESS,
+            abi: AuraNetworkABI as any,
+            functionName: 'keysBalance',
+            args: [checksummedWallet, checksummedSubject],
+          });
+        } catch (e) {
+          console.error("Error creating address checks in fetchPortfolio", e);
         }
       }
-      setHoldings(holdingsArr.sort((a,b) => b.sellPrice * b.amount - a.sellPrice * a.amount));
+
+      if (contracts.length > 0) {
+        const results = await publicClient.multicall({
+          contracts: contracts as any,
+        });
+
+        for (let i = 0; i < uniqueAddresses.length; i++) {
+          const addr = uniqueAddresses[i];
+          const balResult = results[i * 2];
+          const holderBalResult = results[i * 2 + 1];
+
+          if (balResult && balResult.status === 'success') {
+            const amount = Number(balResult.result);
+            if (amount > 0) {
+              myHoldings[addr] = { amount };
+            }
+          }
+
+          if (holderBalResult && holderBalResult.status === 'success') {
+            const holderAmount = Number(holderBalResult.result);
+            if (holderAmount > 0) {
+              myHolders[addr] = holderAmount;
+            }
+          }
+        }
+      }
+
+      // 3. Batch query getSellPrice for holdings using a SINGLE multicall call
+      const holdingsArr = [];
+      let totalVal = 0;
+
+      const priceContracts = [];
+      const holdingsSubjs = Object.keys(myHoldings);
+      for (const subj of holdingsSubjs) {
+        try {
+          priceContracts.push({
+            address: CONTRACT_ADDRESS,
+            abi: AuraNetworkABI as any,
+            functionName: 'getSellPrice',
+            args: [getAddress(subj), 1n],
+          });
+        } catch (e) {
+          console.error("Error creating price check contract", e);
+        }
+      }
+
+      if (priceContracts.length > 0) {
+        const priceResults = await publicClient.multicall({
+          contracts: priceContracts as any,
+        });
+
+        for (let i = 0; i < holdingsSubjs.length; i++) {
+          const subj = holdingsSubjs[i];
+          const amount = myHoldings[subj].amount;
+          const priceResult = priceResults[i];
+          if (priceResult && priceResult.status === 'success') {
+            const priceInMon = Number(formatUnits(priceResult.result as bigint, 18));
+            totalVal += priceInMon * amount;
+            holdingsArr.push({
+              address: getAddress(subj),
+              amount,
+              sellPrice: priceInMon,
+            });
+          }
+        }
+      }
+
+      setHoldings(holdingsArr.sort((a, b) => b.sellPrice * b.amount - a.sellPrice * a.amount));
       setPortfolioValue(totalVal);
-      
+
       const holdersArr = [];
       for (const [holder, amt] of Object.entries(myHolders)) {
-        if (amt > 0) holdersArr.push({ address: holder, amount: amt });
+        if (amt > 0) {
+          try {
+            holdersArr.push({ address: getAddress(holder), amount: amt });
+          } catch (e) {}
+        }
       }
-      setHolders(holdersArr.sort((a,b) => b.amount - a.amount));
-    } catch (err) { console.error(err); } finally { setIsPortfolioLoading(false); }
+      setHolders(holdersArr.sort((a, b) => b.amount - a.amount));
+    } catch (err) {
+      console.error("fetchPortfolio error", err);
+    } finally {
+      setIsPortfolioLoading(false);
+    }
   };
-  useEffect(() => { fetchPortfolio(); }, [walletAddress, isTrading]);
+  useEffect(() => {
+    fetchPortfolio();
+  }, [walletAddress, isTrading]);
 
   // Twitter followers
   useEffect(() => {
@@ -280,6 +591,8 @@ export function AuraProvider({ children }: { children: ReactNode }) {
         .catch(() => { setXFollowers(0); setHasFetchedTwitter(true); });
     }
   }, [authenticated, user]);
+
+
 
   // Load on-chain profile or trigger reveal
   useEffect(() => {
@@ -291,10 +604,10 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       const dbTierColor = dbTierName === 'Shark' ? '#FF5E00' : profileData[2];
       setFullProfile({ name: profileData[0], screen_name: profileData[0], avatar_url: user?.twitter?.profilePictureUrl || `https://unavatar.io/twitter/${profileData[0]}`, followers: xFollowers || 0, following: xFollowing, realData: { balance: mainnetBalance, symbol: 'MON', txCount: mainnetTxCount }, auraScore: Number(profileData[3]), tierName: dbTierName, tierLevel: 'ON-CHAIN', tierColor: dbTierColor });
       setShowRevealModal(false);
-    } else if (user?.twitter && hasFetchedTwitter && !showRevealModal && !fullProfile) {
+    } else if (user?.twitter && hasFetchedTwitter && hasFetchedMainnet && !showRevealModal && !fullProfile) {
       calculateAndReveal();
     }
-  }, [authenticated, user, xFollowers, hasFetchedTwitter, mainnetTxCount, onChainProfile, isProfileLoading]);
+  }, [authenticated, user, xFollowers, hasFetchedTwitter, hasFetchedMainnet, mainnetTxCount, onChainProfile, isProfileLoading]);
 
   const calculateAndReveal = () => {
     const score = Math.floor(((xFollowers || 0) * 1) + (mainnetBalance * 0.01) + (mainnetTxCount * 5));
@@ -309,26 +622,28 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setIsRevealed(true), 3000);
   };
 
-  // Manual minting is now required
-  const ensureMonadNetwork = async () => {
-    if (chain?.id !== monadTestnet.id && switchChainAsync) {
-      await switchChainAsync({ chainId: monadTestnet.id });
-    }
-  };
+
 
   // Actions
   const handleMintProfile = async () => {
     if (!fullProfile) return;
     try {
       setIsMinting(true);
-      await ensureMonadNetwork();
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'registerProfile', chainId: monadTestnet.id, args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, BigInt(Math.floor(fullProfile.auraScore))] });
+      const walletClient = await getWalletClient();
+      const tx = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: AuraNetworkABI,
+        functionName: 'registerProfile',
+        args: [fullProfile.screen_name, fullProfile.tierName, fullProfile.tierColor, BigInt(Math.floor(fullProfile.auraScore))]
+      });
       
       setIsMinting(false);
       setIsMining(true);
       
       const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
       if (receipt?.status === 'reverted') throw new Error("Transaction reverted on-chain (Username may be taken or gas failed).");
+      
+      addAlert('NEW_IDENTITY', `You joined the grid as @${fullProfile.screen_name} (Aura: ${fullProfile.auraScore})`, '#4ade80');
       
       await refetchProfile(); await refetchRadar(); await refetchOwnProfileData();
       setShowRevealModal(false); setShowProfileModal(true);
@@ -341,23 +656,64 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleUpdateProfile = async () => {
+    if (!fullProfile) return;
+    try {
+      setIsMinting(true);
+      const score = Math.floor(((xFollowers || 0) * 1) + (mainnetBalance * 0.01) + (mainnetTxCount * 5));
+      let tierName = 'Initiate', tierColor = '#a1a1aa';
+      if (score >= 150000) { tierName = 'Aura God'; tierColor = '#836EF9'; }
+      else if (score >= 50000) { tierName = 'Whale'; tierColor = '#00E5FF'; }
+      else if (score >= 15000) { tierName = 'Shark'; tierColor = '#FF5E00'; }
+      else if (score >= 5000)  { tierName = 'Node'; tierColor = '#FFD700'; }
+      else if (score >= 1000)  { tierName = 'Operator'; tierColor = '#4ade80'; }
+
+      const walletClient = await getWalletClient();
+      const tx = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: AuraNetworkABI,
+        functionName: 'registerProfile',
+        args: [fullProfile.screen_name, tierName, tierColor, BigInt(score)]
+      });
+      
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+      if (receipt?.status === 'reverted') throw new Error("Transaction reverted on-chain.");
+      
+      addAlert('NEW_IDENTITY', `Your identity was synced. New Aura: ${score}`, '#4ade80');
+      await refetchProfile(); await refetchRadar(); await refetchOwnProfileData();
+    } catch (e: any) { 
+      console.error(e); 
+      alert("Update failed: " + (e.shortMessage || e.message));
+    } finally { 
+      setIsMinting(false); 
+    }
+  };
+
   const handleExecutePost = async (text: string) => {
     const safeContent = sanitizeText(text, 1000);
     if (!safeContent) return;
-    try {
-      await ensureMonadNetwork();
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'executePost', chainId: monadTestnet.id, args: [safeContent] });
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
-      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
-      await refetchPosts();
-    } catch (e) { console.error(e); alert("Post execution failed."); }
+    const walletClient = await getWalletClient();
+    const tx = await walletClient.writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: AuraNetworkABI,
+      functionName: 'executePost',
+      args: [safeContent]
+    });
+    const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+    if (receipt?.status === 'reverted') throw new Error('Transaction reverted on-chain.');
+    await refetchPosts();
   };
 
   const handleLikePost = async (postId: number) => {
     try {
       setLikingPostId(postId);
-      await ensureMonadNetwork();
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'likePost', chainId: monadTestnet.id, args: [postId] });
+      const walletClient = await getWalletClient();
+      const tx = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: AuraNetworkABI,
+        functionName: 'likePost',
+        args: [postId]
+      });
       const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
       if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
       await refetchPosts();
@@ -367,35 +723,80 @@ export function AuraProvider({ children }: { children: ReactNode }) {
   const handleBuyKey = async (address: string, price: bigint) => {
     try {
       setIsTrading(true);
-      await ensureMonadNetwork();
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'buyKey', chainId: monadTestnet.id, args: [address], value: price });
+      const walletClient = await getWalletClient();
+      const tx = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: AuraNetworkABI,
+        functionName: 'buyKey',
+        args: [address],
+        value: price
+      });
       const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
       if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
+      const amt = Number(formatUnits(price, 18)).toFixed(5);
+      
+
+      
+      setHoldings(prev => {
+        const exists = prev.find(h => h.address.toLowerCase() === address.toLowerCase());
+        if (exists) {
+          return prev.map(h => h.address.toLowerCase() === address.toLowerCase() ? { ...h, amount: h.amount + 1 } : h);
+        } else {
+          return [...prev, { address, amount: 1, sellPrice: Number(amt) }];
+        }
+      });
+
       await refetchProfileModal();
+      await refetchOwnProfileData();
+      await fetchPortfolio();
+      
+      setTimeout(() => { refetchProfileModal(); refetchOwnProfileData(); fetchPortfolio(); }, 1500);
+      setTimeout(() => { refetchProfileModal(); refetchOwnProfileData(); fetchPortfolio(); }, 4000);
     } catch (e) { console.error(e); alert("Trade failed"); } finally { setIsTrading(false); }
   };
 
   const handleSellKey = async (address: string) => {
     try {
       setIsTrading(true);
-      await ensureMonadNetwork();
-      const tx = await writeContractAsync({ address: CONTRACT_ADDRESS, abi: AuraNetworkABI, functionName: 'sellKey', chainId: monadTestnet.id, args: [address] });
+      const walletClient = await getWalletClient();
+      const tx = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: AuraNetworkABI,
+        functionName: 'sellKey',
+        args: [address]
+      });
       const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
       if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
+      
+
+      
+      setHoldings(prev => {
+        return prev.map(h => h.address.toLowerCase() === address.toLowerCase() ? { ...h, amount: h.amount - 1 } : h).filter(h => h.amount > 0);
+      });
+
       await refetchProfileModal();
+      await refetchOwnProfileData();
+      await fetchPortfolio();
+      
+      setTimeout(() => { refetchProfileModal(); refetchOwnProfileData(); fetchPortfolio(); }, 1500);
+      setTimeout(() => { refetchProfileModal(); refetchOwnProfileData(); fetchPortfolio(); }, 4000);
     } catch (e) { console.error(e); alert("Trade failed"); } finally { setIsTrading(false); }
   };
 
-  const handleTip = async (toAddress: string) => {
+  const handleTip = async (toAddress: string, amount: string = '1') => {
     if (!toAddress || toAddress.toLowerCase() === walletAddress?.toLowerCase()) return;
     try {
       setIsTipping(true);
-      await ensureMonadNetwork();
-      const tx = await sendTransactionAsync({
-        to: toAddress as `0x${string}`, value: parseEther('0.1') });
+      const walletClient = await getWalletClient();
+      const tx = await walletClient.sendTransaction({
+        to: toAddress as `0x${string}`,
+        value: parseEther(amount),
+        account: walletClient.account
+      });
       const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
       if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
-      alert("Tip successful!");
+      
+
     } catch (e) { console.error("Tip failed", e); } finally { setIsTipping(false); }
   };
 
@@ -429,19 +830,21 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     }).sort((a: any, b: any) => b.auraScore - a.auraScore);
   }
 
+
+
   return (
     <AuraContext.Provider value={{
-      ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter, linkWallet,
+      ready, authenticated, user, login, logout, linkTwitter, unlinkTwitter, linkWallet, unlinkWallet, wallets,
       walletAddress, balanceData, mainnetTxCount, mainnetBalance,
-      publicClient, writeContractAsync, sendTransactionAsync,
+      publicClient,
       onChainProfile, onChainPosts, allProfilesData, refetchProfile, refetchPosts, refetchRadar,
       fullProfile, setFullProfile, showRevealModal, setShowRevealModal, isRevealed,
       showProfileModal, setShowProfileModal, publicProfile, setPublicProfile,
       isMinting, isTrading, isTipping, likingPostId,
       xFollowers, xFollowing,
-      alerts,
+      alerts, addAlert, unreadRoomsCount, clearUnreadRooms, unreadAlertsCount, clearUnreadAlerts,
       holdings, holders, isPortfolioLoading, portfolioValue, fetchPortfolio,
-      handleMintProfile, handleExecutePost, handleLikePost, handleBuyKey, handleSellKey, handleTip, openPublicProfile,
+      handleMintProfile, handleUpdateProfile, handleExecutePost, handleLikePost, handleBuyKey, handleSellKey, handleTip, openPublicProfile,
       posts, radarProfiles, profileModalData, refetchProfileModal, ownProfileData, refetchOwnProfileData,
       isMining
     }}>

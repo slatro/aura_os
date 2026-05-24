@@ -20,6 +20,7 @@ export default function Portfolio() {
     isPortfolioLoading,
     portfolioValue,
     fetchPortfolio,
+    fullProfile
   } = useAura();
 
   useEffect(() => {
@@ -48,30 +49,38 @@ export default function Portfolio() {
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Portfolio Value Hero */}
-        <div className="border border-[#836EF9]/30 bg-[#836EF908] rounded-lg p-6 text-center relative overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-5"
-            style={{
-              background:
-                'radial-gradient(ellipse at center, #836EF9 0%, transparent 70%)',
-            }}
-          />
-          <div className="relative">
-            <p className="font-mono text-xs text-[#52525b] tracking-widest uppercase mb-2">
-              Total Portfolio Value
+        <div className="border border-[#836EF9]/30 bg-[#836EF908] rounded-lg p-6 text-center relative overflow-hidden flex flex-col md:flex-row items-center justify-around gap-6">
+          <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(ellipse at center, #836EF9 0%, transparent 70%)' }} />
+          
+          <div className="relative z-10">
+            <p className="font-mono text-[10px] text-[#52525b] tracking-widest uppercase mb-1">
+              Liquid Balance (Mainnet)
+            </p>
+            {fullProfile ? (
+              <p className="font-mono text-2xl font-bold text-white">
+                {fullProfile.realData.balance.toFixed(4)} <span className="text-sm text-white/50 ml-1">MON</span>
+              </p>
+            ) : (
+              <p className="font-mono text-sm text-[#52525b]">Loading...</p>
+            )}
+          </div>
+
+          <div className="hidden md:block w-px h-16 bg-[#18181b] relative z-10" />
+
+          <div className="relative z-10">
+            <p className="font-mono text-[10px] text-[#836EF9] tracking-widest uppercase mb-1">
+              Cards Portfolio Value
             </p>
             {isPortfolioLoading ? (
-              <div className="flex items-center justify-center gap-2">
-                <span className="inline-block w-5 h-5 border-2 border-[#836EF9] border-t-transparent rounded-full animate-spin" />
-                <span className="font-mono text-sm text-[#52525b]">Calculating...</span>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <span className="inline-block w-4 h-4 border-2 border-[#836EF9] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
-              <p className="font-mono text-4xl font-bold text-[#836EF9]">
-                {portfolioValue.toFixed(5)}
-                <span className="text-lg text-[#836EF9]/60 ml-2">MON</span>
+              <p className="font-mono text-3xl font-bold text-[#836EF9] drop-shadow-[0_0_10px_rgba(131,110,249,0.5)]">
+                {portfolioValue.toFixed(5)} <span className="text-lg text-[#836EF9]/60 ml-1">MON</span>
               </p>
             )}
-            <p className="font-mono text-xs text-[#3f3f46] tracking-wider mt-2">
+            <p className="font-mono text-[10px] text-[#3f3f46] tracking-wider mt-2">
               {holdings.length} holdings · {holders.length} holders
             </p>
           </div>

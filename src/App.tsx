@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuraProvider } from './context/AuraContext';
-import { Sidebar, RightSidebar, RevealModal } from './components/Layout';
+import { Sidebar, RightSidebar, RevealModal, PublicProfileModal } from './components/Layout';
 import Stream from './pages/Stream';
 import Radar from './pages/Radar';
 import Alerts from './pages/Alerts';
@@ -24,6 +24,8 @@ function AppShell() {
   const { ready } = useAura();
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] || 'AURA_OS';
+
+
 
   if (!ready) {
     return (
@@ -71,8 +73,13 @@ function AppShell() {
         <RightSidebar />
       </div>
 
+
+
       {/* Reveal Modal */}
       <RevealModal />
+
+      {/* Public Profile Modal */}
+      <PublicProfileModal />
     </div>
   );
 }

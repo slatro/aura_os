@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Lock, Hash } from 'lucide-react';
 import { useAura, CONTRACT_ADDRESS } from '../context/AuraContext';
 import AuraNetworkABI from '../config/AuraNetworkABI.json';
-import { monadTestnet } from 'viem/chains';
-import { useSwitchChain, useAccount } from 'wagmi';
 
 function getInitials(address: string): string {
   return address ? address.slice(2, 4).toUpperCase() : '??';
@@ -30,11 +28,8 @@ export default function Rooms() {
     holdings,
     allProfilesData,
     publicClient,
-    writeContractAsync,
+    clearUnreadRooms,
   } = useAura();
-
-  const { switchChainAsync } = useSwitchChain();
-  const { chain } = useAccount();
 
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [roomMessages, setRoomMessages] = useState<any[]>([]);
@@ -52,12 +47,15 @@ export default function Rooms() {
             username: fullProfile?.screen_name || walletAddress.slice(0, 6),
             tierColor: fullProfile?.tierColor || '#836EF9',
             isOwn: true,
+            amount: 1,
+            auraScore: fullProfile?.auraScore || 0,
           },
         ]
       : []),
-    ...holdings.map((h) => {
+    ...holdings.filter((h) => h.address.toLowerCase() !== walletAddress?.toLowerCase()).map((h) => {
       let username = `${h.address.slice(0, 6)}...`;
-      let tierColor = getAvatarColor(h.address);
+      let tierColor = '#a1a1aa';
+      let auraScore = 0;
       if (allProfilesData && (allProfilesData as any[])[0]) {
         const addresses = (allProfilesData as any[])[0] as string[];
         const profilesList = (allProfilesData as any[])[1] as any[];
@@ -70,13 +68,19 @@ export default function Rooms() {
             profilesList[idx].tierName === 'Shark'
               ? '#FF5E00'
               : profilesList[idx].tierColor || tierColor;
+          auraScore = Number(profilesList[idx].auraScore) || 0;
         }
       }
-      return { address: h.address, username, tierColor, isOwn: false, amount: h.amount };
+      return { address: h.address, username, tierColor, isOwn: false, amount: h.amount, auraScore };
     }),
   ];
 
-  // Fetch messages when room changes
+
+  useEffect(() => {
+    if (clearUnreadRooms) clearUnreadRooms();
+  }, [clearUnreadRooms]);
+
+  // Handle selected room messages loading room changes
   useEffect(() => {
     if (!selectedRoom || !publicClient) return;
 
@@ -133,8 +137,14 @@ export default function Rooms() {
           };
         });
 
-        messages.sort((a: any, b: any) => a.timestamp - b.timestamp);
-        setRoomMessages(messages);
+        // Also fetch local messages for this room
+        const localMsgsRaw = localStorage.getItem(`room_${selectedRoom.address}`);
+        const localMsgs = localMsgsRaw ? JSON.parse(localMsgsRaw) : [];
+
+        // Combine and sort
+        const allMsgs = [...messages, ...localMsgs].sort((a: any, b: any) => a.timestamp - b.timestamp);
+        
+        setRoomMessages(allMsgs);
       } catch (err) {
         console.error('Error fetching room messages:', err);
       } finally {
@@ -152,43 +162,33 @@ export default function Rooms() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !selectedRoom || isSendingMsg || !walletAddress) return;
-
-    const msgText = chatInput.trim();
-    setChatInput('');
-    setIsSendingMsg(true);
-
-    // Optimistic update
-    const optimisticMsg = {
-      id: `optimistic-${Date.now()}`,
-      sender: walletAddress,
-      username: fullProfile?.screen_name || `${walletAddress.slice(0, 6)}...`,
-      tierColor: fullProfile?.tierColor || '#836EF9',
-      message: msgText,
-      timestamp: Math.floor(Date.now() / 1000),
-      optimistic: true,
-    };
-    setRoomMessages((prev) => [...prev, optimisticMsg]);
+    if (!chatInput.trim() || !selectedRoom || !walletAddress) return;
 
     try {
-      if (chain?.id !== monadTestnet.id && switchChainAsync) {
-        await switchChainAsync({ chainId: monadTestnet.id });
-      }
-      const tx = await writeContractAsync({
-        address: CONTRACT_ADDRESS as `0x${string}`,
-        abi: AuraNetworkABI,
-        functionName: 'sendMessage',
-        chainId: monadTestnet.id,
-        args: [selectedRoom.address, msgText],
-      });
-      const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
-      if (receipt?.status === 'reverted') throw new Error("Transaction reverted.");
+      setIsSendingMsg(true);
+      
+      const newMsg = {
+        id: Date.now().toString(),
+        sender: walletAddress,
+        username: fullProfile?.screen_name || walletAddress.slice(0, 6),
+        tierColor: fullProfile?.tierColor || '#836EF9',
+        message: chatInput.trim(),
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      const existingRaw = localStorage.getItem(`room_${selectedRoom.address}`);
+      const existing = existingRaw ? JSON.parse(existingRaw) : [];
+      const updated = [...existing, newMsg];
+      localStorage.setItem(`room_${selectedRoom.address}`, JSON.stringify(updated));
+
+      setRoomMessages(prev => [...prev, newMsg]);
       setChatInput('');
+      
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (err) {
-      console.error('Failed to send message:', err);
-      // Revert optimistic update on error
-      setRoomMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-      setChatInput(msgText);
+      console.error('Error sending message:', err);
     } finally {
       setIsSendingMsg(false);
     }

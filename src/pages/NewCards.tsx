@@ -15,57 +15,42 @@ function getInitials(address: string): string {
 }
 
 export default function NewCards() {
-  const { publicClient, openPublicProfile } = useAura();
+  const { publicClient, openPublicProfile, radarProfiles } = useAura();
   const [newCards, setNewCards] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!publicClient) return;
+    if (!publicClient || !radarProfiles || radarProfiles.length === 0) return;
 
     const fetchNewCards = async () => {
       setIsLoading(true);
       try {
-        const latestBlock = await publicClient.getBlockNumber();
-        const fromBlock = latestBlock > 50000n ? latestBlock - 50000n : 0n;
-
-        const eventAbi = (AuraNetworkABI as any[]).find(
-          (a) => a.type === 'event' && a.name === 'ProfileRegistered'
-        );
-
-        const logs = await publicClient.getLogs({
-          address: CONTRACT_ADDRESS as `0x${string}`,
-          event: eventAbi,
-          fromBlock,
-          toBlock: 'latest',
-        });
+        // Since registeredAddresses in the contract is append-only, the newest are at the end.
+        const newestProfiles = [...radarProfiles].reverse().slice(0, 50);
 
         // Fetch buy prices for each profile
         const cardsWithPrices = await Promise.all(
-          logs.map(async (log: any) => {
-            const { user, username, score } = log.args;
+          newestProfiles.map(async (profile: any) => {
             let buyPrice = 0n;
             try {
               buyPrice = (await publicClient.readContract({
                 address: CONTRACT_ADDRESS as `0x${string}`,
                 abi: AuraNetworkABI,
                 functionName: 'getBuyPrice',
-                args: [user, 1n],
+                args: [profile.address, 1n],
               })) as bigint;
             } catch {
               // ignore price fetch errors
             }
             return {
-              address: user,
-              username: username || '',
-              score: Number(score),
-              blockNumber: Number(log.blockNumber),
+              address: profile.address,
+              username: profile.username || '',
+              score: Number(profile.score || profile.auraScore || 0),
               buyPrice,
             };
           })
         );
 
-        // Sort by block number descending (newest first)
-        cardsWithPrices.sort((a, b) => b.blockNumber - a.blockNumber);
         setNewCards(cardsWithPrices);
       } catch (err) {
         console.error('Error fetching new cards:', err);
@@ -75,7 +60,7 @@ export default function NewCards() {
     };
 
     fetchNewCards();
-  }, [publicClient]);
+  }, [publicClient, radarProfiles]);
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#050505]">
@@ -121,40 +106,36 @@ export default function NewCards() {
 
             return (
               <div
-                key={`${card.address}-${card.blockNumber}`}
-                className="border rounded-lg p-4 transition-all hover:scale-[1.01] group relative overflow-hidden"
+                key={`${card.address}`}
+                className="border rounded-lg p-3 transition-all hover:scale-[1.01] group relative overflow-hidden"
                 style={{
-                  borderColor: isNewest ? `${color}66` : '#18181b',
-                  backgroundColor: isNewest ? `${color}08` : '#09090b',
-                  boxShadow: isNewest ? `0 0 24px ${color}22` : 'none',
+                  borderColor: '#18181b',
+                  backgroundColor: '#09090b',
                 }}
               >
-                {/* Newest badge */}
-                {isNewest && (
-                  <div
-                    className="absolute top-0 right-0 font-mono text-xs px-3 py-1 rounded-bl-lg tracking-widest uppercase font-bold"
-                    style={{
-                      backgroundColor: `${color}22`,
-                      color,
-                      borderLeft: `1px solid ${color}44`,
-                      borderBottom: `1px solid ${color}44`,
-                    }}
-                  >
-                    ◆ NEWEST
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   {/* Avatar */}
                   <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-mono font-bold flex-shrink-0"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-mono font-bold flex-shrink-0 overflow-hidden"
                     style={{
                       backgroundColor: `${color}22`,
                       border: `1.5px solid ${color}66`,
                       color,
                     }}
                   >
-                    {getInitials(card.address)}
+                    {card.username && card.username !== 'Unknown' ? (
+                      <img 
+                        src={`https://unavatar.io/twitter/${card.username}`} 
+                        alt={card.username}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).parentElement!.innerText = getInitials(card.address);
+                        }}
+                      />
+                    ) : (
+                      getInitials(card.address)
+                    )}
                   </div>
 
                   {/* Info */}
@@ -163,8 +144,20 @@ export default function NewCards() {
                       <span className="font-mono text-sm font-bold text-[#e4e4e7] group-hover:text-[#836EF9] transition-colors">
                         {card.username ? `@${card.username}` : 'Unknown'}
                       </span>
+                    </div>
+                    <div className="font-mono text-[11px] text-[#52525b] tracking-wider mt-0.5">
+                      {card.address.slice(0, 6)}...{card.address.slice(-4)}
+                    </div>
+                    <div className="font-mono text-[11px] text-[#3f3f46] tracking-wider mt-0.5">
+                      {isNewest ? 'Latest Arrival' : 'Recently Joined'}
+                    </div>
+                  </div>
+
+                  {/* Right Side: Price, Aura, Snipe */}
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0 w-[140px]">
+                    <div className="flex items-center justify-end gap-2 w-full">
                       <span
-                        className="font-mono text-xs px-1.5 py-0.5 rounded border tracking-wider"
+                        className="font-mono text-[10px] px-1.5 py-0.5 rounded border tracking-wider"
                         style={{
                           color,
                           borderColor: `${color}44`,
@@ -173,26 +166,16 @@ export default function NewCards() {
                       >
                         AURA {card.score.toLocaleString()}
                       </span>
-                    </div>
-                    <div className="font-mono text-xs text-[#52525b] tracking-wider mt-0.5">
-                      {card.address.slice(0, 6)}...{card.address.slice(-4)}
-                    </div>
-                    <div className="font-mono text-xs text-[#3f3f46] tracking-wider mt-0.5">
-                      Block #{card.blockNumber.toLocaleString()}
-                    </div>
-                  </div>
-
-                  {/* Price + Snipe */}
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <div className="text-right">
-                      <div className="font-mono text-sm font-bold text-[#4ade80]">
-                        {priceFormatted}
+                      <div className="text-right flex items-baseline gap-1">
+                        <div className="font-mono text-sm font-bold text-[#4ade80]">
+                          {priceFormatted}
+                        </div>
+                        <div className="font-mono text-[10px] text-[#3f3f46]">MON</div>
                       </div>
-                      <div className="font-mono text-xs text-[#3f3f46]">MON</div>
                     </div>
                     <button
                       onClick={() => openPublicProfile(card.address, card)}
-                      className="font-mono text-xs px-3 py-1.5 rounded border tracking-widest uppercase font-bold transition-all hover:scale-105 active:scale-95"
+                      className="font-mono text-[10px] px-3 py-1 rounded border tracking-widest uppercase font-bold transition-all hover:scale-105 active:scale-95 w-full"
                       style={{
                         color,
                         borderColor: `${color}66`,

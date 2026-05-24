@@ -47,7 +47,7 @@ async function main() {
 
   console.log("Connecting to Monad Testnet...");
   const provider = new ethers.JsonRpcProvider('https://testnet-rpc.monad.xyz/');
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+  const wallet = new ethers.Wallet("0xee2341557e19f20348689a0a754ea1d12da6f26a42d823d52afcc5d5154bd948", provider);
 
   console.log("Deploying from address:", wallet.address);
   const factory = new ethers.ContractFactory(abi, bytecode, wallet);

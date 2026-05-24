@@ -1,8 +1,10 @@
 import { Trophy } from 'lucide-react';
 import { useAura } from '../context/AuraContext';
 
-function getInitials(address: string): string {
-  return address ? address.slice(2, 4).toUpperCase() : '??';
+function getInitials(text: string): string {
+  if (!text) return '??';
+  const clean = text.startsWith('@') ? text.slice(1) : text;
+  return clean.slice(0, 2).toUpperCase();
 }
 
 const RANK_STYLES: Record<number, { border: string; bg: string; label: string; glow: string }> = {
@@ -94,7 +96,7 @@ export default function Radar() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      getInitials(profile.address)
+                      getInitials(profile.username || profile.address)
                     )}
                   </div>
 
