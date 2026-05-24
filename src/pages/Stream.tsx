@@ -596,17 +596,21 @@ function RepostCard({
   openPublicProfile,
 }: any) {
   const profile = getProfileForAddress(repost.originalAuthorAddr);
+  const repostedByProfile = getProfileForAddress(repost.repostedByAddr);
   const avatarColor = profile?.tierColor || getAvatarColor(repost.originalAuthorAddr);
   const isMyRepost = walletAddress && repost.repostedByAddr.toLowerCase() === walletAddress.toLowerCase();
   const postId = repost.repostId;
   const commentCount = getCommentCount(postId);
+
+  const displayOriginalUsername = profile?.username || repost.originalUsername;
+  const displayRepostedByUsername = repostedByProfile?.username || repost.repostedByUsername;
 
   return (
     <div className="border border-[#18181b] border-l-[#4ade80]/40 bg-[#09090b] rounded-lg p-4 space-y-3 hover:border-[#4ade80]/30 transition-colors group relative">
       {/* Repost indicator */}
       <div className="flex items-center gap-2 text-[#4ade80] font-mono text-[10px] tracking-widest uppercase mb-1">
         <Repeat className="w-3 h-3" />
-        <span>@{repost.repostedByUsername} reposted</span>
+        <span>@{displayRepostedByUsername} reposted</span>
         <span className="text-[#3f3f46] ml-1">· {timeAgo(repost.repostedAt)}</span>
         {isMyRepost && (
           <button
@@ -637,7 +641,7 @@ function RepostCard({
               onClick={() => openPublicProfile(repost.originalAuthorAddr, profile)}
               className="font-mono text-sm font-bold text-[#e4e4e7] hover:text-[#836EF9] transition-colors truncate"
             >
-              {repost.originalUsername ? `@${repost.originalUsername}` : `${repost.originalAuthorAddr.slice(0, 6)}...`}
+              {displayOriginalUsername ? `@${displayOriginalUsername}` : `${repost.originalAuthorAddr.slice(0, 6)}...`}
             </button>
             {profile?.tierName && (
               <span
@@ -754,6 +758,8 @@ function CommentsPanel({
               ? `https://unavatar.io/twitter/${profile.username}` 
               : (c.avatarUrl || '');
 
+            const displayUsername = profile?.username || c.username || (c.author ? `${c.author.slice(0, 6)}...` : 'Unknown');
+
             return (
               <div key={c.id} className="flex gap-3 items-start border-l border-[#18181b] pl-3 py-1 group/comment relative">
                 <div
@@ -761,12 +767,12 @@ function CommentsPanel({
                   style={{ backgroundColor: `${avatarBgColor}22`, border: `1px solid ${avatarBgColor}55`, color: avatarBgColor }}
                 >
                   {displayAvatarUrl ? (
-                    <img src={displayAvatarUrl} alt={c.username} className="w-full h-full object-cover mix-blend-luminosity hover:mix-blend-normal transition-all" />
+                    <img src={displayAvatarUrl} alt={displayUsername} className="w-full h-full object-cover mix-blend-luminosity hover:mix-blend-normal transition-all" />
                   ) : initials}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-[#e4e4e7]">@{c.username}</span>
+                    <span className="font-mono text-xs font-bold text-[#e4e4e7]">@{displayUsername}</span>
                     <span className="font-mono text-[9px] text-[#3f3f46]">{timeAgo(c.timestamp)}</span>
                     {isMyComment && (
                       <button

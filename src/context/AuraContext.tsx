@@ -519,6 +519,20 @@ export function AuraProvider({ children }: { children: ReactNode }) {
     setIsRevealed(false);
   }, [walletAddress]);
 
+  // Synchronize Wagmi address with Privy session to prevent account/profile mismatches
+  useEffect(() => {
+    if (ready && authenticated && user && wagmiAddress) {
+      const linkedWallets = user.linkedAccounts?.filter((a: any) => a.type === 'wallet') || [];
+      const hasActiveWallet = linkedWallets.some(
+        (w: any) => w.address.toLowerCase() === wagmiAddress.toLowerCase()
+      );
+      if (!hasActiveWallet) {
+        console.warn("Wagmi address mismatch with Privy session. Logging out to prevent profile mismatch.");
+        logout();
+      }
+    }
+  }, [wagmiAddress, authenticated, user, ready]);
+
   const [isMinting, setIsMinting] = useState(false);
   const [isMining, setIsMining] = useState(false);
   const [isTrading, setIsTrading] = useState(false);
