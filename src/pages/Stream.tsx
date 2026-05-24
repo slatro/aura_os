@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Terminal, MessageSquare, Repeat, Zap, Trash2, X } from 'lucide-react';
 import { useAura } from '../context/AuraContext';
 
@@ -25,7 +25,32 @@ function getAvatarColor(address: string): string {
 }
 
 // =============================================
-// LOCAL STORAGE HELPERS
+// KVDB GLOBAL STORAGE (shared across all users)
+// =============================================
+const KVDB_BUCKET = 'EaBHLmVQufVZNeR2UbgSjr';
+const KVDB_BASE = `https://kvdb.io/${KVDB_BUCKET}`;
+
+async function kvdbGet(key: string): Promise<any> {
+  try {
+    const res = await fetch(`${KVDB_BASE}/${key}`);
+    if (!res.ok) return null;
+    const text = await res.text();
+    return JSON.parse(text);
+  } catch { return null; }
+}
+
+async function kvdbSet(key: string, value: any): Promise<void> {
+  try {
+    await fetch(`${KVDB_BASE}/${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(value),
+    });
+  } catch { /* silently fail */ }
+}
+
+// =============================================
+// LOCAL STORAGE HELPERS (cache layer)
 // =============================================
 const REPOSTS_KEY = 'aura_reposts';
 const HIDDEN_POSTS_KEY = 'aura_hidden';
@@ -49,7 +74,7 @@ function saveLikedPosts(s: Set<number>) { localStorage.setItem(LIKES_KEY, JSON.s
 function loadComments(postId: number | string): any[] {
   try { return JSON.parse(localStorage.getItem(`comments_${postId}`) || '[]'); } catch { return []; }
 }
-function saveComments(postId: number | string, comments: any[]) {
+function saveCommentsLocal(postId: number | string, comments: any[]) {
   localStorage.setItem(`comments_${postId}`, JSON.stringify(comments));
 }
 
@@ -91,9 +116,23 @@ export default function Stream() {
   const [commentInput, setCommentInput] = useState('');
   const [commentsRefresh, setCommentsRefresh] = useState(0); // force re-render
 
-  // Reposts (off-chain)
+  // Reposts (off-chain, global via KVdb)
   const [reposts, setReposts] = useState<RepostEntry[]>(() => loadReposts());
   const [repostingId, setRepostingId] = useState<number | string | null>(null);
+
+  // Load global reposts from KVdb on mount (merge with local)
+  useEffect(() => {
+    kvdbGet('reposts').then((data: any) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setReposts(prev => {
+          const localOnly = prev.filter(r => !data.find((d: any) => d.repostId === r.repostId));
+          const merged = [...data, ...localOnly];
+          saveReposts(merged);
+          return merged;
+        });
+      }
+    });
+  }, []);
 
   // Hidden on-chain posts (local delete)
   const [hiddenPosts, setHiddenPosts] = useState<number[]>(() => loadHiddenPosts());
@@ -142,9 +181,9 @@ export default function Stream() {
   };
 
   // =============================================
-  // REPOST (off-chain, no wallet)
+  // REPOST (off-chain, global via KVdb)
   // =============================================
-  const handleRepost = (post: any, username: string) => {
+  const handleRepost = async (post: any, username: string) => {
     if (!walletAddress || !fullProfile) return;
     setRepostingId(post.id);
 
@@ -158,6 +197,7 @@ export default function Stream() {
       saveReposts(updated);
       setReposts(updated);
       setRepostingId(null);
+      kvdbSet('reposts', updated); // async, no await needed
       return;
     }
 
@@ -177,9 +217,7 @@ export default function Stream() {
     saveReposts(updated);
     setReposts(updated);
     setRepostingId(null);
-
-    // No self-notification — the post author will see 'X reposted your signal' via their own client
-    // when they watch PostCreated events (for on-chain reposts) or via their own stream.
+    kvdbSet('reposts', updated); // persist globally
   };
 
   const hasReposted = (postId: number | string) =>
@@ -189,9 +227,9 @@ export default function Stream() {
     reposts.filter(r => r.originalPostId === postId).length;
 
   // =============================================
-  // COMMENTS (off-chain, no wallet)
+  // COMMENTS (off-chain, global via KVdb)
   // =============================================
-  const handleAddComment = (postId: number | string) => {
+  const handleAddComment = async (postId: number | string) => {
     if (!commentInput.trim() || !walletAddress || !fullProfile) return;
 
     const newComment = {
@@ -203,19 +241,33 @@ export default function Stream() {
       timestamp: Math.floor(Date.now() / 1000),
     };
 
-    const existing = loadComments(postId);
+    // Fetch latest from KVdb to avoid overwriting concurrent comments
+    let existing: any[] = [];
+    try {
+      const kvdbData = await kvdbGet(`comments_${postId}`);
+      existing = Array.isArray(kvdbData) ? kvdbData : loadComments(postId);
+    } catch {
+      existing = loadComments(postId);
+    }
+
     const updated = [...existing, newComment];
-    saveComments(postId, updated);
+    saveCommentsLocal(postId, updated);
+    await kvdbSet(`comments_${postId}`, updated); // persist globally
     setCommentsRefresh(c => c + 1);
     setCommentInput('');
-
-    // No self-notification when commenting
   };
 
-  const handleDeleteComment = (postId: number | string, commentId: string) => {
-    const existing = loadComments(postId);
+  const handleDeleteComment = async (postId: number | string, commentId: string) => {
+    let existing: any[] = [];
+    try {
+      const kvdbData = await kvdbGet(`comments_${postId}`);
+      existing = Array.isArray(kvdbData) ? kvdbData : loadComments(postId);
+    } catch {
+      existing = loadComments(postId);
+    }
     const updated = existing.filter((c: any) => c.id !== commentId);
-    saveComments(postId, updated);
+    saveCommentsLocal(postId, updated);
+    await kvdbSet(`comments_${postId}`, updated);
     setCommentsRefresh(c => c + 1);
   };
 
@@ -618,15 +670,43 @@ function CommentsPanel({
   onAddComment,
   onDeleteComment,
   getProfileForAddress,
+  commentsRefresh,
 }: any) {
-  const comments = loadComments(postId);
+  const [comments, setComments] = useState<any[]>(() => loadComments(postId));
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    kvdbGet(`comments_${postId}`).then((data: any) => {
+      if (!active) return;
+      if (Array.isArray(data)) {
+        saveCommentsLocal(postId, data);
+        setComments(data);
+      }
+      setIsLoading(false);
+    }).catch(() => {
+      if (active) setIsLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [postId, commentsRefresh]);
 
   return (
-    <div className="mt-4 pt-4 border-t border-[#18181b] space-y-4 pl-4">
+    <div className="mt-4 pt-4 border-t border-[#18181b] space-y-4 pl-4 relative">
+      {isLoading && (
+        <span className="absolute top-2 right-2 font-mono text-[9px] text-[#836EF9] animate-pulse">
+          ⚡ SYNCING...
+        </span>
+      )}
       {/* Comment list */}
       <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
         {comments.length === 0 ? (
-          <p className="font-mono text-xs text-[#3f3f46] tracking-wider italic">No grid transmissions yet...</p>
+          <p className="font-mono text-xs text-[#3f3f46] tracking-wider italic">
+            {isLoading ? 'Scanning grid...' : 'No grid transmissions yet...'}
+          </p>
         ) : (
           comments.map((c: any) => {
             const initials = c.author ? c.author.slice(2, 4).toUpperCase() : '??';
