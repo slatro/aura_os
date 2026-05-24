@@ -105,6 +105,7 @@ export default function Stream() {
     handleExecutePost,
     openPublicProfile,
     radarProfiles,
+    addGlobalNotification,
   } = useAura();
 
   const [composeText, setComposeText] = useState('');
@@ -218,6 +219,16 @@ export default function Stream() {
     setReposts(updated);
     setRepostingId(null);
     kvdbSet('reposts', updated); // persist globally
+
+    // Send global notification to original author
+    if (post.authorAddr && post.authorAddr.toLowerCase() !== walletAddress.toLowerCase()) {
+      addGlobalNotification(
+        post.authorAddr,
+        'REPOST',
+        `@${fullProfile.screen_name} reposted your signal #${post.id}`,
+        '#4ade80'
+      );
+    }
   };
 
   const hasReposted = (postId: number | string) =>
@@ -255,6 +266,31 @@ export default function Stream() {
     await kvdbSet(`comments_${postId}`, updated); // persist globally
     setCommentsRefresh(c => c + 1);
     setCommentInput('');
+
+    // Send global notification to post/repost author
+    try {
+      let postAuthorAddr = '';
+      const onChainPost = posts.find(p => p.id === Number(postId));
+      if (onChainPost) {
+        postAuthorAddr = onChainPost.authorAddr;
+      } else {
+        const rp = reposts.find(r => r.repostId === postId);
+        if (rp) {
+          postAuthorAddr = rp.repostedByAddr;
+        }
+      }
+      
+      if (postAuthorAddr && postAuthorAddr.toLowerCase() !== walletAddress.toLowerCase()) {
+        addGlobalNotification(
+          postAuthorAddr,
+          'COMMENT',
+          `@${fullProfile.screen_name} commented on your signal #${postId}: "${commentInput.trim().slice(0, 40)}${commentInput.trim().length > 40 ? '...' : ''}"`,
+          '#00E5FF'
+        );
+      }
+    } catch (e) {
+      console.error('Failed to notify post author:', e);
+    }
   };
 
   const handleDeleteComment = async (postId: number | string, commentId: string) => {
@@ -714,16 +750,18 @@ function CommentsPanel({
             const avatarBgColor = profile?.tierColor || getAvatarColor(c.author);
             const isMyComment = walletAddress && c.author.toLowerCase() === walletAddress.toLowerCase();
 
+            const displayAvatarUrl = profile?.username 
+              ? `https://unavatar.io/twitter/${profile.username}` 
+              : (c.avatarUrl || '');
+
             return (
               <div key={c.id} className="flex gap-3 items-start border-l border-[#18181b] pl-3 py-1 group/comment relative">
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold flex-shrink-0 overflow-hidden"
                   style={{ backgroundColor: `${avatarBgColor}22`, border: `1px solid ${avatarBgColor}55`, color: avatarBgColor }}
                 >
-                  {c.avatarUrl ? (
-                    <img src={c.avatarUrl} alt={c.username} className="w-full h-full object-cover mix-blend-luminosity hover:mix-blend-normal transition-all" />
-                  ) : profile?.username ? (
-                    <img src={`https://unavatar.io/twitter/${profile.username}`} alt="avatar" className="w-full h-full object-cover mix-blend-luminosity hover:mix-blend-normal transition-all" />
+                  {displayAvatarUrl ? (
+                    <img src={displayAvatarUrl} alt={c.username} className="w-full h-full object-cover mix-blend-luminosity hover:mix-blend-normal transition-all" />
                   ) : initials}
                 </div>
                 <div className="flex-1 min-w-0">

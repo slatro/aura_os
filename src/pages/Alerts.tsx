@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, Bell, Zap, UserPlus, Terminal, TrendingUp, MessageSquare, Cpu, Coins } from 'lucide-react';
+import { Activity, Bell, Zap, UserPlus, Terminal, TrendingUp, MessageSquare, Cpu, Coins, Repeat } from 'lucide-react';
 import { useAura } from '../context/AuraContext';
 
 function formatTime(date: Date): string {
@@ -19,6 +19,8 @@ const ALERT_TYPE_CONFIG: Record<string, { label: string; color: string; icon: an
   TIP: { label: 'TRANSFER', color: '#F59E0B', icon: Coins },
   SYSTEM: { label: 'SYSTEM', color: '#836EF9', icon: Cpu },
   ROOM: { label: 'ROOM', color: '#836EF9', icon: MessageSquare },
+  COMMENT: { label: 'COMMENT', color: '#00E5FF', icon: MessageSquare },
+  REPOST: { label: 'REPOST', color: '#4ade80', icon: Repeat },
 };
 
 export default function Alerts() {
@@ -51,7 +53,9 @@ export default function Alerts() {
              msgLower.includes('tipped you') ||
              msgLower.includes('resonated with your') ||
              alert.type === 'TIP' ||
-             alert.type === 'ROOM';
+             alert.type === 'ROOM' ||
+             alert.type === 'COMMENT' ||
+             alert.type === 'REPOST';
     }
     return true;
   });

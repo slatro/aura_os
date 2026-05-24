@@ -105,6 +105,7 @@ interface AuraContextType {
   // Alerts
   alerts: any[];
   addAlert: (type: string, message: string, color: string) => void;
+  addGlobalNotification: (targetAddress: string, type: string, message: string, color: string) => Promise<void>;
   unreadRoomsCount: number;
   clearUnreadRooms: () => void;
   unreadAlertsCount: number;
@@ -244,6 +245,102 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       setUnreadAlertsCount(prev => prev + 1);
     }
   };
+
+  // KVdb Global Storage for Off-chain Alerts
+  const KVDB_BUCKET = 'EaBHLmVQufVZNeR2UbgSjr';
+  const KVDB_BASE = `https://kvdb.io/${KVDB_BUCKET}`;
+
+  async function kvdbGet(key: string): Promise<any> {
+    try {
+      const res = await fetch(`${KVDB_BASE}/${key}`);
+      if (!res.ok) return null;
+      const text = await res.text();
+      return JSON.parse(text);
+    } catch { return null; }
+  }
+
+  async function kvdbSet(key: string, value: any): Promise<void> {
+    try {
+      await fetch(`${KVDB_BASE}/${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(value),
+      });
+    } catch { /* silently fail */ }
+  }
+
+  const addGlobalNotification = async (targetAddress: string, type: string, message: string, color: string) => {
+    if (!targetAddress) return;
+    try {
+      const key = `notifications_${targetAddress.toLowerCase()}`;
+      const existing = await kvdbGet(key);
+      const notifs = Array.isArray(existing) ? existing : [];
+      
+      const newNotif = {
+        id: `notif_${Date.now()}_${Math.random()}`,
+        type,
+        message,
+        timestamp: Math.floor(Date.now() / 1000),
+        color,
+      };
+      
+      const updated = [newNotif, ...notifs].slice(0, 50);
+      await kvdbSet(key, updated);
+    } catch (err) {
+      console.error('Failed to send global notification:', err);
+    }
+  };
+
+  // Poll for global off-chain notifications from KVdb
+  useEffect(() => {
+    if (!walletAddress) return;
+    
+    let cancelled = false;
+    const loadKVdbNotifications = async () => {
+      try {
+        const notifs = await kvdbGet(`notifications_${walletAddress.toLowerCase()}`);
+        if (cancelled) return;
+        if (Array.isArray(notifs)) {
+          setAlerts(prev => {
+            // Find notifications we haven't seen yet
+            const newNotifs = notifs.filter(n => !prev.some(p => p.id === n.id));
+            if (newNotifs.length === 0) return prev;
+            
+            // Map timestamps to Date objects
+            const formattedNewNotifs = newNotifs.map(n => ({
+              ...n,
+              time: new Date(n.timestamp * 1000)
+            }));
+            
+            // Increment unread count if not on alerts page
+            if (typeof window !== 'undefined' && window.location.pathname !== '/alerts') {
+              setUnreadAlertsCount(c => c + formattedNewNotifs.length);
+            }
+            
+            // Merge and sort
+            const merged = [...formattedNewNotifs, ...prev].sort((a, b) => {
+              const tA = a.time instanceof Date ? a.time.getTime() : new Date(a.time).getTime();
+              const tB = b.time instanceof Date ? b.time.getTime() : new Date(b.time).getTime();
+              return tB - tA;
+            });
+            return merged.slice(0, 100);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load KVdb notifications:', err);
+      }
+    };
+    
+    // Load immediately
+    loadKVdbNotifications();
+    
+    // Poll every 10 seconds for instant notification sync!
+    const interval = setInterval(loadKVdbNotifications, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [walletAddress]);
 
   // ── HISTORICAL ALERT LOADER ──────────────────────────────────────────────
   // Runs whenever wallet connects. Fetches recent past events so the user
@@ -842,7 +939,7 @@ export function AuraProvider({ children }: { children: ReactNode }) {
       showProfileModal, setShowProfileModal, publicProfile, setPublicProfile,
       isMinting, isTrading, isTipping, likingPostId,
       xFollowers, xFollowing,
-      alerts, addAlert, unreadRoomsCount, clearUnreadRooms, unreadAlertsCount, clearUnreadAlerts,
+      alerts, addAlert, addGlobalNotification, unreadRoomsCount, clearUnreadRooms, unreadAlertsCount, clearUnreadAlerts,
       holdings, holders, isPortfolioLoading, portfolioValue, fetchPortfolio,
       handleMintProfile, handleUpdateProfile, handleExecutePost, handleLikePost, handleBuyKey, handleSellKey, handleTip, openPublicProfile,
       posts, radarProfiles, profileModalData, refetchProfileModal, ownProfileData, refetchOwnProfileData,
