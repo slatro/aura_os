@@ -194,7 +194,9 @@ export function Sidebar() {
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <span className="font-bold text-[13px] text-white truncate max-w-[100px]">{fullProfile.name}</span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border" style={{ backgroundColor: `${fullProfile.tierColor}15`, color: fullProfile.tierColor, borderColor: `${fullProfile.tierColor}50` }}>{fullProfile.tierLevel}</span>
+                    {fullProfile.tierLevel !== 'ON-CHAIN' && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border" style={{ backgroundColor: `${fullProfile.tierColor}15`, color: fullProfile.tierColor, borderColor: `${fullProfile.tierColor}50` }}>{fullProfile.tierLevel}</span>
+                    )}
                   </div>
                   <span className="text-[#a1a1aa] text-[11px] font-mono">@{fullProfile.screen_name}</span>
                 </div>
