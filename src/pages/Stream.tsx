@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Terminal, MessageSquare, Repeat, Zap, Trash2, X } from 'lucide-react';
 import { useAura } from '../context/AuraContext';
 
@@ -97,6 +98,7 @@ interface RepostEntry {
 // MAIN COMPONENT
 // =============================================
 export default function Stream() {
+  const navigate = useNavigate();
   const {
     posts,
     walletAddress,
@@ -106,7 +108,16 @@ export default function Stream() {
     openPublicProfile,
     radarProfiles,
     addGlobalNotification,
+    login,
   } = useAura();
+
+  const handleRegisterClick = () => {
+    if (!walletAddress) {
+      login();
+    } else {
+      navigate('/profile');
+    }
+  };
 
   const [composeText, setComposeText] = useState('');
   const [isPosting, setIsPosting] = useState(false);
@@ -368,9 +379,12 @@ export default function Stream() {
               {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'NOT CONNECTED'}
             </span>
             {!isRegistered && (
-              <span className="ml-auto font-mono text-xs text-[#FF3366] tracking-wider uppercase">
+              <button
+                onClick={handleRegisterClick}
+                className="ml-auto font-mono text-xs text-[#FF3366] hover:text-white transition-colors tracking-wider uppercase cursor-pointer hover:underline"
+              >
                 ⚠ Register to Post
-              </span>
+              </button>
             )}
           </div>
 
