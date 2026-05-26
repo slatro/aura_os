@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Sparkles } from '@react-three/drei';
-import { Terminal, MessageSquare, Repeat, Wallet, Bell, Crosshair, Trophy, PenTool, Sparkles as SparklesIcon, RefreshCw } from 'lucide-react';
+import { Terminal, MessageSquare, Repeat, Wallet, Bell, Crosshair, Trophy, PenTool, Sparkles as SparklesIcon, RefreshCw, User } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAura } from '../context/AuraContext';
 import { formatUnits } from 'viem';
@@ -148,8 +148,8 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="w-[280px] flex-shrink-0" />
-      <div className="w-[280px] h-screen fixed top-0 left-[calc(50%-600px)] flex flex-col py-4 pr-6 z-50">
+      <div className="hidden md:block w-[280px] flex-shrink-0" />
+      <div className="hidden md:flex w-[280px] h-screen fixed top-0 left-[calc(50%-600px)] flex-col py-4 pr-6 z-50">
         <div className="space-y-1">
           <div className="flex items-center space-x-3 mb-8 ml-2">
             <div className="w-10 h-10 overflow-hidden flex-shrink-0">
@@ -230,7 +230,7 @@ export function RightSidebar() {
   ).slice(0, 5) : [];
 
   return (
-    <div className="w-[320px] pl-6 py-4 h-screen sticky top-0 flex flex-col space-y-6">
+    <div className="hidden lg:flex w-[320px] pl-6 py-4 h-screen sticky top-0 flex-col space-y-6">
       <div className="relative">
         <div className="bg-[#09090b] border border-[#27272a] flex items-center p-2 cyber-button focus-within:border-[#836EF9]/50">
           <Crosshair className="w-4 h-4 text-[#71717a] ml-2 mr-3" />
@@ -450,6 +450,92 @@ export function RevealModal() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// =============================================
+// MOBILE HEADER
+// =============================================
+export function MobileHeader() {
+  const navigate = useNavigate();
+  const { fullProfile } = useAura();
+
+  return (
+    <div className="md:hidden sticky top-0 z-20 bg-[#050505]/95 backdrop-blur-md border-b border-[#18181b] px-4 py-3 flex items-center justify-between">
+      {/* Left side: Profile Avatar */}
+      <button 
+        onClick={() => navigate('/profile')} 
+        className="w-8 h-8 rounded-full border flex items-center justify-center overflow-hidden flex-shrink-0"
+        style={{ 
+          borderColor: fullProfile?.tierColor || '#836EF950',
+          backgroundColor: fullProfile?.tierColor ? `${fullProfile.tierColor}15` : '#836EF905' 
+        }}
+      >
+        {fullProfile?.avatar_url ? (
+          <img src={fullProfile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+        ) : (
+          <User className="w-4 h-4 text-[#836EF9]" />
+        )}
+      </button>
+
+      {/* Middle: Brand Logo */}
+      <div className="flex items-center space-x-2">
+        <span className="text-white font-bold tracking-widest uppercase text-xs">AURA_OS</span>
+        <span className="text-[#836EF9] text-[8px] tracking-widest font-mono">V.3.0</span>
+      </div>
+
+      {/* Right side: New Cards / Quick Mint Icon */}
+      <button 
+        onClick={() => navigate('/new-cards')}
+        className="text-[#836EF9] hover:text-white p-1"
+      >
+        <SparklesIcon className="w-4 h-4 animate-pulse" />
+      </button>
+    </div>
+  );
+}
+
+// =============================================
+// MOBILE BOTTOM NAVIGATION
+// =============================================
+export function MobileBottomNav() {
+  const { unreadAlertsCount, unreadRoomsCount } = useAura();
+
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#050505]/90 backdrop-blur-md border-t border-[#18181b] pb-safe-bottom flex items-center justify-around py-2">
+      <NavLink to="/stream" className={({ isActive }) => `flex flex-col items-center gap-0.5 font-mono text-[9px] uppercase tracking-wider cursor-pointer ${isActive ? 'text-[#836EF9]' : 'text-[#52525b]'}`}>
+        <Terminal className="w-5 h-5" />
+        <span>Stream</span>
+      </NavLink>
+      <NavLink to="/radar" className={({ isActive }) => `flex flex-col items-center gap-0.5 font-mono text-[9px] uppercase tracking-wider cursor-pointer ${isActive ? 'text-[#836EF9]' : 'text-[#52525b]'}`}>
+        <Crosshair className="w-5 h-5" />
+        <span>Radar</span>
+      </NavLink>
+      <NavLink to="/alerts" className={({ isActive }) => `flex flex-col items-center gap-0.5 font-mono text-[9px] uppercase tracking-wider cursor-pointer relative ${isActive ? 'text-[#836EF9]' : 'text-[#52525b]'}`}>
+        <Bell className="w-5 h-5" />
+        <span>Alerts</span>
+        {unreadAlertsCount > 0 && (
+          <span className="absolute right-0 top-0 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+          </span>
+        )}
+      </NavLink>
+      <NavLink to="/rooms" className={({ isActive }) => `flex flex-col items-center gap-0.5 font-mono text-[9px] uppercase tracking-wider cursor-pointer relative ${isActive ? 'text-[#836EF9]' : 'text-[#52525b]'}`}>
+        <MessageSquare className="w-5 h-5" />
+        <span>Rooms</span>
+        {unreadRoomsCount > 0 && (
+          <span className="absolute right-0 top-0 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+          </span>
+        )}
+      </NavLink>
+      <NavLink to="/portfolio" className={({ isActive }) => `flex flex-col items-center gap-0.5 font-mono text-[9px] uppercase tracking-wider cursor-pointer ${isActive ? 'text-[#836EF9]' : 'text-[#52525b]'}`}>
+        <Wallet className="w-5 h-5" />
+        <span>Wallet</span>
+      </NavLink>
     </div>
   );
 }

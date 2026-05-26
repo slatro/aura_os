@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuraProvider } from './context/AuraContext';
-import { Sidebar, RightSidebar, RevealModal, PublicProfileModal } from './components/Layout';
+import { Sidebar, RightSidebar, RevealModal, PublicProfileModal, MobileHeader, MobileBottomNav } from './components/Layout';
 import Stream from './pages/Stream';
 import Radar from './pages/Radar';
 import Alerts from './pages/Alerts';
@@ -40,13 +40,14 @@ function AppShell() {
       <div className="fixed inset-0 cyber-grid z-0 opacity-100"></div>
       <div className="fixed inset-0 scanlines z-0 opacity-80 pointer-events-none"></div>
 
-      <div className="w-full max-w-[1200px] flex justify-between relative z-10 pt-4">
+      <div className="w-full max-w-[1200px] flex justify-center md:justify-between relative z-10 pt-0 md:pt-4">
         {/* Left Sidebar */}
         <Sidebar />
 
         {/* Middle Column */}
-        <div className="w-[600px] border-x border-[#18181b] min-h-screen flex flex-col bg-[#050505]/95 backdrop-blur-md">
-          <header className="sticky top-0 z-10 bg-[#050505] border-b border-[#18181b]">
+        <div className="w-full max-w-full md:w-[600px] border-x-0 md:border-x border-[#18181b] min-h-screen flex flex-col bg-[#050505]/95 backdrop-blur-md pb-20 md:pb-0">
+          {/* Desktop Header */}
+          <header className="hidden md:block sticky top-0 z-10 bg-[#050505] border-b border-[#18181b]">
             <div className="flex w-full">
               <div className="flex-1 text-white relative flex justify-center py-4">
                 <span className="text-white font-bold tracking-widest text-sm uppercase">{title}</span>
@@ -54,6 +55,9 @@ function AppShell() {
               </div>
             </div>
           </header>
+
+          {/* Mobile Header */}
+          <MobileHeader />
 
           <Routes>
             <Route path="/" element={<Navigate to="/stream" replace />} />
@@ -73,7 +77,8 @@ function AppShell() {
         <RightSidebar />
       </div>
 
-
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
 
       {/* Reveal Modal */}
       <RevealModal />

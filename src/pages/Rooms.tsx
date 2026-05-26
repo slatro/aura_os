@@ -212,7 +212,7 @@ export default function Rooms() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Room List */}
-        <div className="w-64 border-r border-[#18181b] flex flex-col flex-shrink-0 overflow-hidden">
+        <div className={`w-full md:w-64 border-r border-[#18181b] flex flex-col flex-shrink-0 overflow-hidden ${selectedRoom ? 'hidden md:flex' : 'flex'}`}>
           <div className="px-4 py-3 border-b border-[#18181b]">
             <p className="font-mono text-xs text-[#52525b] tracking-widest uppercase">
               {rooms.length} accessible rooms
@@ -290,7 +290,7 @@ export default function Rooms() {
         </div>
 
         {/* Right Panel: Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className={`flex-1 flex flex-col overflow-hidden ${!selectedRoom ? 'hidden md:flex' : 'flex'}`}>
           {!selectedRoom ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4">
               <MessageSquare className="w-12 h-12 text-[#27272a]" />
@@ -305,6 +305,13 @@ export default function Rooms() {
             <>
               {/* Room Header */}
               <div className="border-b border-[#18181b] px-5 py-3 flex items-center gap-3 flex-shrink-0">
+                {/* Back button on mobile */}
+                <button 
+                  onClick={() => setSelectedRoom(null)} 
+                  className="md:hidden text-[#52525b] hover:text-white mr-1 font-mono text-xs cursor-pointer flex items-center"
+                >
+                  ← Rooms
+                </button>
                 <div
                   className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-mono font-bold overflow-hidden"
                   style={{
